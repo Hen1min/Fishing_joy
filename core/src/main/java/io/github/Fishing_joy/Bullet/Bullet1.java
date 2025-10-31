@@ -22,9 +22,9 @@ public class Bullet1 extends Bullet {
     public Bullet1(float x, float y, float angleDeg, float speed) {
         super(x, y, angleDeg, speed, region, webRegion);
         // default damage/cost for Bullet1
-        this.minDamage = 8;
+        this.minDamage = 5;
         this.maxDamage = 12;
-        this.cost = 4;
+        this.cost = 8;
         // tune collision radius to be tighter than sprite bounds
         if (region != null) {
             float rw = region.getRegionWidth();

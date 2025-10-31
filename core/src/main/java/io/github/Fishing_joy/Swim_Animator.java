@@ -17,15 +17,18 @@ import io.github.Fishing_joy.Bullet.Bullet;
 import io.github.Fishing_joy.Bullet.Bullet1;
 import io.github.Fishing_joy.Bullet.Bullet2;
 import io.github.Fishing_joy.Bullet.Bullet3;
+import io.github.Fishing_joy.Bullet.Bullet4;
 import io.github.Fishing_joy.Cannon.Cannon;
 import io.github.Fishing_joy.Cannon.Cannon1;
 import io.github.Fishing_joy.Cannon.Cannon2;
 import io.github.Fishing_joy.Cannon.Cannon3;
+import io.github.Fishing_joy.Cannon.Cannon4;
 import io.github.Fishing_joy.Fish.Fish;
 import io.github.Fishing_joy.Fish.Fish1;
 import io.github.Fishing_joy.Fish.Fish2;
 import io.github.Fishing_joy.Fish.Fish3;
 import io.github.Fishing_joy.Fish.Fish4;
+import io.github.Fishing_joy.Fish.Fish5;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -33,6 +36,9 @@ import java.util.List;
 public class Swim_Animator implements ApplicationListener {
 
     // Objects used
+    private int playerScore = 1000; // start with 50 points so player can fire immediately
+    private float playerEnergy = 0f; // starting energy (float for smooth decrease)
+
     SpriteBatch spriteBatch;
     FitViewport viewport;
     Texture bgTexture;
@@ -52,13 +58,12 @@ public class Swim_Animator implements ApplicationListener {
     TextureRegion[] digitRegions;
     private final List<Bullet> bullets = new ArrayList<>();
     // player state
-    private int playerScore = 50; // start with 50 points so player can fire immediately
-    private float playerEnergy = 0f; // starting energy (float for smooth decrease)
+
     BitmapFont font;
     ShapeRenderer shapeRenderer;
     // debug flag to draw collision radii (useful for tuning)
     // enable to draw rotated rectangle collision polygons for bullets and fish
-    private boolean debugDrawCollisions = true;
+    private boolean debugDrawCollisions = false;
 
     // --- Berserk mode state ---
     private boolean berserkActive = false;
@@ -141,10 +146,12 @@ public class Swim_Animator implements ApplicationListener {
         Cannon1.load();
         Cannon2.load();
         Cannon3.load();
+        Cannon4.load();
         // Preload bullet texture
         Bullet1.load();
         Bullet2.load();
         Bullet3.load();
+        Bullet4.load();
         // simple bitmap font for HUD
         font = new BitmapFont();
          // create SpriteBatch before Cannon instance so viewport sizes are usable
@@ -155,6 +162,7 @@ public class Swim_Animator implements ApplicationListener {
         Fish2.load();
         Fish3.load();
         Fish4.load();
+        Fish5.load();
 
         // Create a few Fish instances at different positions with different speed
         // All Fish1 instances use the type default speed (Fish1.DEFAULT_SPEED internally)
@@ -215,6 +223,19 @@ public class Swim_Animator implements ApplicationListener {
 
     public void spawnFish4() {
         Fish fish = Fish4.create();
+        float Num = MathUtils.random();
+        //fishEntities.add(new FishEntity(fish, -fish.getWidth(), MathUtils.random(0, viewport.getWorldHeight() - fish.getHeight()),MathUtils.random(0,360)));
+        if (Num<1/3f) {
+            fishEntities.add(new FishEntity(fish, -fish.getWidth(), MathUtils.random(0, viewport.getWorldHeight()), MathUtils.random(-45, 45), -1));//左边出
+        } else if (Num < 2/3f) {
+            fishEntities.add(new FishEntity(fish,  viewport.getWorldWidth() + fish.getWidth(), MathUtils.random(0,viewport.getWorldHeight()), MathUtils.random(135,225), 1));//右边出
+        } else {
+            fishEntities.add(new FishEntity(fish, MathUtils.random(0,viewport.getWorldWidth()) , viewport.getWorldHeight(), MathUtils.random(225,305), 0));//上边出
+        }
+    }
+
+    public void spawnFish5() {
+        Fish fish = Fish5.create();
         float Num = MathUtils.random();
         //fishEntities.add(new FishEntity(fish, -fish.getWidth(), MathUtils.random(0, viewport.getWorldHeight() - fish.getHeight()),MathUtils.random(0,360)));
         if (Num<1/3f) {
@@ -401,7 +422,7 @@ public class Swim_Animator implements ApplicationListener {
                     float oldScaleX = font.getData().scaleX;
                     float oldScaleY = font.getData().scaleY;
                     font.getData().setScale(scale);
-                    font.setColor(1f, 0.5f, 0f, alpha); // orange color
+                    font.setColor(1f, 0.65f, 0f, alpha); // orange color
 
                     for (int li = 0; li < lines.length; li++) {
                         String line = lines[li];
@@ -479,18 +500,22 @@ public class Swim_Animator implements ApplicationListener {
         // update cannon cooldown timer so canFire()/tryFire() work correctly
         if (cannon != null) cannon.updateFireCooldown(delta);
         FishGeneratorGapTime += delta;
-        if (FishGeneratorGapTime >= 1.0f) {
+        // spawn interval is shorter during berserk
+        float spawnInterval = berserkActive ? 0.3f : 1.0f;
+        if (FishGeneratorGapTime >= spawnInterval) {
             // Spawn a new fish at a random vertical position on the left side
-            float ran = MathUtils.random();
+            float ran = MathUtils.random(0,100);
 
-            if (ran < 0.4f){
+            if (ran < 50.0f) {
                 spawnFish1();
-            }else if(ran < 0.7f){
+            }else if(ran < 68f){
                 spawnFish2();
-            }else if(ran < 0.9f){
+            }else if(ran < 81f){
                 spawnFish3();
-            }else{
+            }else if(ran < 93f){
                 spawnFish4();
+            }else{
+                spawnFish5();
             }
             FishGeneratorGapTime = 0f;
         }
@@ -508,7 +533,7 @@ public class Swim_Animator implements ApplicationListener {
                 if (isPointInLeftIcon(world.x, world.y)) {
                      iconLeftPressed = true;
                      iconLeftPressTime = 0f;
-                     int levels = 3;
+                     int levels = 4;
                      currentCannonLevel = (currentCannonLevel - 2 + levels) % levels + 1; // downgrade
                      float ang = cannon.getAngleDeg();
                      float cx = cannon.getX();
@@ -516,7 +541,8 @@ public class Swim_Animator implements ApplicationListener {
                      Cannon newC;
                      if (currentCannonLevel == 1) newC = new Cannon1(cx, cy);
                      else if (currentCannonLevel == 2) newC = new Cannon2(cx, cy);
-                     else newC = new Cannon3(cx, cy);
+                     else if (currentCannonLevel == 3) newC = new Cannon3(cx, cy);
+                     else newC = new Cannon4(cx, cy);
                     // if berserk active, ensure new cannon has berserk cooldown
                     if (berserkActive) {
                          newC.setFireCooldown(0.25f);
@@ -530,7 +556,7 @@ public class Swim_Animator implements ApplicationListener {
                 if (isPointInRightIcon(world.x, world.y)) {
                      iconRightPressed = true;
                      iconRightPressTime = 0f;
-                     int levels = 3;
+                     int levels = 4;
                      currentCannonLevel = (currentCannonLevel % levels) + 1; // upgrade
                      float ang = cannon.getAngleDeg();
                      float cx = cannon.getX();
@@ -539,7 +565,8 @@ public class Swim_Animator implements ApplicationListener {
                      Cannon newC;
                      if (currentCannonLevel == 1) newC = new Cannon1(cx, cy);
                      else if (currentCannonLevel == 2) newC = new Cannon2(cx, cy);
-                     else newC = new Cannon3(cx, cy);
+                     else if (currentCannonLevel == 3) newC = new Cannon3(cx, cy);
+                     else newC = new Cannon4(cx, cy);
 
                      if (berserkActive) {
                          newC.setFireCooldown(0.25f);
@@ -559,36 +586,25 @@ public class Swim_Animator implements ApplicationListener {
                     cannon.triggerAnimation();
                     float[] muzzle = cannon.getMuzzlePosition();
                     int level = cannon.getLevel();
+                    // Create the bullet for this cannon level first, then ask it for its cost.
+                    Bullet b;
                     if (level == 1) {
-                        int cost = 4;
-                        int effectiveCost = berserkActive ? (cost / 2) : cost; // halve cost during berserk (floor)
-                        if (playerScore >= effectiveCost) {
-                            playerScore -= effectiveCost;
-                            Bullet b = new Bullet1(muzzle[0], muzzle[1], cannon.getAngleDeg() + 90f);
-                            bullets.add(b);
-                        } else {
-                            Gdx.app.log("Game", "Not enough points to fire: need " + effectiveCost + ", have " + playerScore);
-                        }
+                        b = new Bullet1(muzzle[0], muzzle[1], cannon.getAngleDeg() + 90f);
                     } else if (level == 2) {
-                        int cost = 6;
-                        int effectiveCost = berserkActive ? (cost / 2) : cost;
-                        if (playerScore >= effectiveCost) {
-                            playerScore -= effectiveCost;
-                            Bullet b = new Bullet2(muzzle[0], muzzle[1], cannon.getAngleDeg() + 90f);
-                            bullets.add(b);
-                        } else {
-                            Gdx.app.log("Game", "Not enough points to fire: need " + effectiveCost + ", have " + playerScore);
-                        }
-                    } else { // level == 3
-                        int cost = 10;
-                        int effectiveCost = berserkActive ? (cost / 2) : cost;
-                        if (playerScore >= effectiveCost) {
-                            playerScore -= effectiveCost;
-                            Bullet b = new Bullet3(muzzle[0], muzzle[1], cannon.getAngleDeg() + 90f);
-                            bullets.add(b);
-                        } else {
-                            Gdx.app.log("Game", "Not enough points to fire: need " + effectiveCost + ", have " + playerScore);
-                        }
+                        b = new Bullet2(muzzle[0], muzzle[1], cannon.getAngleDeg() + 90f);
+                    } else if (level == 3){ // level == 3
+                        b = new Bullet3(muzzle[0], muzzle[1], cannon.getAngleDeg() + 90f);
+                    } else {
+                        b = new Bullet4(muzzle[0], muzzle[1], cannon.getAngleDeg() + 90f);
+                    }
+
+                    int cost = b.getCost();
+                    int effectiveCost = berserkActive ? (cost / 2) : cost; // halve cost during berserk (floor)
+                    if (playerScore >= effectiveCost) {
+                        playerScore -= effectiveCost;
+                        bullets.add(b);
+                    } else {
+                        Gdx.app.log("Game", "Not enough points to fire: need " + effectiveCost + ", have " + playerScore);
                     }
                 } else {
                     Gdx.app.log("Game", "Cannon cooling down: cannot fire yet");
@@ -682,7 +698,7 @@ public class Swim_Animator implements ApplicationListener {
                 // award points/energy based on fish type now that death animation finished
                 Fish.FishReward reward = fe.fish.getCaptureReward();
                 int points = reward.getPoints();
-                if (berserkActive) points = points * 2; // double points during berserk
+                if (berserkActive) points = (int) (points * 1.5f); // double points during berserk
                 playerScore += points;
                 int energyGain = reward.getEnergy();
                 if (!berserkActive) {
@@ -737,10 +753,13 @@ public class Swim_Animator implements ApplicationListener {
         Cannon1.disposeStatic();
         Cannon2.disposeStatic();
         Cannon3.disposeStatic();
+        Cannon4.disposeStatic();
         // Dispose bullet textures
         Bullet1.disposeTexture();
         Bullet2.disposeTexture();
         Bullet3.disposeTexture();
+        Bullet4.disposeTexture();
+
     }
 
     // UI-layer hit tests for icons (compute positions from cannon position & icon regions)

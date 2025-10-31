@@ -10,10 +10,10 @@ import com.badlogic.gdx.graphics.g2d.TextureRegion;
  * It manages static animation resources and provides factory methods to
  * create Fish objects with animation and a given speed.
  */
-public class Fish2 {
+public class Fish5 {
 
     // Public image path constant (relative to assets/)
-    public static final String IMAGE_PATH = "fish2.png";
+    public static final String IMAGE_PATH = "fish5.png";
 
     private static Texture texture;
     private static Animation<TextureRegion> swimAnimation;
@@ -25,13 +25,13 @@ public class Fish2 {
     private static final float FRAME_DURATION = 0.1f;
 
     // 默认属性（可改）
-    private static final String DEFAULT_NAME = "Fish2";
-    private static final int DEFAULT_HP = 28;
-    private static final int DEFAULT_POINTS = 25;
-    private static final int DEFAULT_ENERGY = 1;
-    private static final float DEFAULT_SPEED = 25f; // units per second (pixels or world units)
+    private static final String DEFAULT_NAME = "Fish5";
+    private static final int DEFAULT_HP = 100;
+    private static final int DEFAULT_POINTS = 160;
+    private static final int DEFAULT_ENERGY = 3;
+    private static final float DEFAULT_SPEED = 16f; // units per second (pixels or world units)
 
-    private Fish2() {
+    private Fish5() {
         // private - static helper class
     }
 
@@ -88,7 +88,7 @@ public class Fish2 {
         return texture;
     }
 
-    // Factory: create a Fish instance for Fish2 with the type's default speed
+    // Factory: create a Fish instance for Fish1 with the type's default speed
     public static Fish create() {
         if (!loaded) load();
         Fish f = new Fish(DEFAULT_NAME, DEFAULT_HP, DEFAULT_POINTS, DEFAULT_ENERGY, IMAGE_PATH, swimAnimation, caughtAnimation, DEFAULT_SPEED);
