@@ -1208,17 +1208,6 @@ public class Swim_Animator implements ApplicationListener {
         if (Gdx.input.isKeyJustPressed(Input.Keys.D)) {
             debugDrawCollisions = !debugDrawCollisions;
         }
-        // Allow 'P' to toggle pause (pressing P should pause/unpause immediately)
-        // (keyboard 'P' handling moved earlier so it works while paused)
-        // if (Gdx.input.isKeyJustPressed(Input.Keys.P)) {
-        //     paused = !paused;
-        //     try {
-        //         if (paused) AudioManager.get().pausePlayback();
-        //         else AudioManager.get().resumePlayback();
-        //     } catch (Exception ignored) {}
-        //     Gdx.app.log("Game", "Pause toggled by key P. paused=" + paused);
-        //     return; // consume frame so no state updates this frame
-        // }
 
         // check collisions: flying bullets vs fish
         // collision detection (AABB) - iterate bullets and fish (enhanced for)
