@@ -5,7 +5,6 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
-import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.g2d.GlyphLayout;
@@ -93,11 +92,8 @@ public class Swim_Animator implements ApplicationListener {
     private float startBtnX = 0f;
     private float startBtnY = 0f;
     private float startBtnW = 300f;
-    private float startBtnH = 90f;
-    // animation: gradient phase for START button (edge:white -> center:orange)
-    private float startGradientAnimTime = 0f;
-    private final float startGradientDuration = 3.5f; // seconds to approach final gradient
-    // (ring count for START button gradient is allocated locally in render)
+    private float startBtnH = 90f;// START button uses a static rounded rectangle (no animated gradient)
+    // (previous animated gradient variables removed)
 
     // Track START button touch/press state so we can render a narrow shadow when pressed
     private boolean startTouchActive = false; // true if touch started inside START button
@@ -437,17 +433,8 @@ public class Swim_Animator implements ApplicationListener {
                     float outerW = startBtnW;
                     float outerH = startBtnH;
 
-                    // progress 0..1, use a root (ease-in for orange expansion) so orange quickly occupies most area then slows
-                    float progress = MathUtils.clamp(startGradientAnimTime / startGradientDuration, 0f, 1f);
-                    float eased = (float)Math.pow(progress, 1f / 3f); // root makes early growth faster
-
-                    // inner fraction threshold: as eased goes from 0->1 the innerFraction goes 1->0 so
-                    // orange area grows over time (small orange at start, large orange at end)
-                    float innerFraction = 1f - eased;
-
-                    float baseCorner = Math.min(outerW, outerH) * 0.18f; // corner radius for outermost ring
-
                     // If the start button is pressed, draw a narrow semi-transparent shadow rounded rect slightly outside the button
+                    float baseCorner = Math.min(outerW, outerH) * 0.18f;
                     if (startPressed) {
                         float pad = Math.min(8f, Math.min(outerW, outerH) * 0.06f); // narrow padding for shadow
                         float sw = outerW + pad * 2f;
@@ -457,12 +444,10 @@ public class Swim_Animator implements ApplicationListener {
                         float cornerShadow = Math.min(baseCorner + pad, Math.min(sw, sh) * 0.18f);
                         // shadow color: semi-transparent black
                         shapeRenderer.setColor(0f, 0f, 0f, 0.45f);
-                        // draw rounded rect: center rect + sides + corner circles
+                        // draw rounded rect: center rect + sides + corner circles (single pass)
                         float innerW = Math.max(0f, sw - 2f * cornerShadow);
                         float innerH = Math.max(0f, sh - 2f * cornerShadow);
-                        if (innerW > 0f && innerH > 0f) {
-                            shapeRenderer.rect(sx + cornerShadow, sy + cornerShadow, innerW, innerH);
-                        }
+                        if (innerW > 0f && innerH > 0f) shapeRenderer.rect(sx + cornerShadow, sy + cornerShadow, innerW, innerH);
                         if (innerW > 0f) {
                             shapeRenderer.rect(sx + cornerShadow, sy, innerW, cornerShadow);
                             shapeRenderer.rect(sx + cornerShadow, sy + sh - cornerShadow, innerW, cornerShadow);
@@ -479,56 +464,8 @@ public class Swim_Animator implements ApplicationListener {
                         }
                     }
 
-                    // (ring count for START button gradient is allocated locally in render)
-                    int rings = 36; // local number of concentric rounded-rect rings used for gradient
-                    for (int i = rings - 1; i >= 0; i--) {
-                        float radiusFrac = (float)i / (rings - 1); // 1 outer -> 0 inner
-                        float w = Math.max(0f, outerW * radiusFrac);
-                        float h = Math.max(0f, outerH * radiusFrac);
-                        if (w <= 0f || h <= 0f) continue;
-                        float x = cx - w / 2f;
-                        float y = cy - h / 2f;
-
-                        float centerFrac = 1f - radiusFrac; // 0 at edge -> 1 at center
-                        float t;
-                        if (centerFrac >= innerFraction) {
-                            t = 1f; // fully orange
-                        } else if (innerFraction <= 0f) {
-                            t = 0f;
-                        } else {
-                            t = MathUtils.clamp(centerFrac / innerFraction, 0f, 1f);
-                        }
-
-                        // lerp white -> orange (orange = 1,0.65,0)
-                        float rcol = 1f;
-                        float gcol = (1f - t) + 0.65f * t;
-                        float bcol = (1f - t);
-                        shapeRenderer.setColor(rcol, gcol, bcol, 1f);
-
-                        float corner = baseCorner * radiusFrac; // scale corner radius with size so inner roundedness stays proportional
-                        // draw rounded rect: center rect + edge rects + corner circles
-                        float innerW = Math.max(0f, w - 2f * corner);
-                        float innerH = Math.max(0f, h - 2f * corner);
-                        if (innerW > 0f && innerH > 0f) {
-                            shapeRenderer.rect(x + corner, y + corner, innerW, innerH);
-                        }
-                        // sides
-                        if (innerW > 0f) {
-                            shapeRenderer.rect(x + corner, y, innerW, corner); // bottom
-                            shapeRenderer.rect(x + corner, y + h - corner, innerW, corner); // top
-                        }
-                        if (innerH > 0f) {
-                            shapeRenderer.rect(x, y + corner, corner, innerH); // left
-                            shapeRenderer.rect(x + w - corner, y + corner, corner, innerH); // right
-                        }
-                        // corners
-                        if (corner > 0f) {
-                            shapeRenderer.circle(x + corner, y + corner, corner);
-                            shapeRenderer.circle(x + w - corner, y + corner, corner);
-                            shapeRenderer.circle(x + corner, y + h - corner, corner);
-                            shapeRenderer.circle(x + w - corner, y + h - corner, corner);
-                        }
-                    }
+                    // Draw START button using the same rounded-gradient button helper so its color/appearance behaves like the BACK button
+                    drawRoundedGradientButton(shapeRenderer, startBtnX, startBtnY, startBtnW, startBtnH, 1f, 0.65f, 0f, startPressed);
 
                     // Draw help button background (a circular button) with pressed shadow similar to START pressed style
                     float hx = helpBtnX + helpBtnW / 2f;
