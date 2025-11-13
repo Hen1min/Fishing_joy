@@ -4,6 +4,9 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import java.util.ArrayList;
+import java.util.List;
+import io.github.Fishing_joy.util.MultiCircleCollision;
 
 /**
  * Fish1 is a helper/factory for creating Fish instances of type Fish1.
@@ -98,6 +101,27 @@ public class Fish1 {
         int frameHeight = texture.getHeight() / FRAME_COUNT;
         float tunedRadius = Math.min(frameWidth, frameHeight) * 0.5f * 0.6f; // 60% of half-min-dim
         f.setCollisionRadius(tunedRadius);
+
+        // Set a multi-circle approximation that focuses on the fish body and avoids the shadow below.
+        // Circles are in sprite-local coordinates with (0,0) at the sprite center used for rendering.
+        float halfW = frameWidth / 2f;
+        float halfH = frameHeight / 2f;
+        // Increase base radius and lift circles upward so they better cover the visible fish body (avoid shadow below)
+        float bodyBase = Math.min(frameWidth, frameHeight) * 0.5f * 0.55f; // larger base radius
+        // Shift centroid slightly to the right as requested and add left-side small filler circles
+        float centerX = halfW * 0.12f; // slight right bias for Fish1
+        List<MultiCircleCollision.Circle> circles = new ArrayList<>();
+        // main body (upper area)
+        circles.add(new MultiCircleCollision.Circle(centerX, halfH * 0.18f, bodyBase));
+        // head (further to the right)
+        circles.add(new MultiCircleCollision.Circle(centerX + halfW * 0.22f, halfH * 0.20f, bodyBase * 0.95f));
+        // tail (left, smaller)
+        circles.add(new MultiCircleCollision.Circle(centerX - halfW * 0.40f, halfH * 0.12f, bodyBase * 0.65f));
+        // small filler circles on the left side, same vertical level as main body
+        circles.add(new MultiCircleCollision.Circle(centerX - halfW * 0.65f, halfH * 0.18f, bodyBase * 0.38f));
+        circles.add(new MultiCircleCollision.Circle(centerX - halfW * 0.85f, halfH * 0.18f, bodyBase * 0.28f));
+        f.setCollisionCircles(circles);
+
         return f;
     }
 }

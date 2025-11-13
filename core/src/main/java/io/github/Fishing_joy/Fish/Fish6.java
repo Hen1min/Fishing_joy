@@ -4,6 +4,9 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import java.util.ArrayList;
+import java.util.List;
+import io.github.Fishing_joy.util.MultiCircleCollision;
 
 /**
  * Fish1 is a helper/factory for creating Fish instances of type Fish1.
@@ -96,6 +99,23 @@ public class Fish6 {
         int frameHeight = texture.getHeight() / FRAME_COUNT;
         float tunedRadius = Math.min(frameWidth, frameHeight) * 0.5f * 0.6f; // 60% of half-min-dim
         f.setCollisionRadius(tunedRadius);
+        float halfW = frameWidth / 2f;
+        float halfH = frameHeight / 2f;
+        // enlarge and lift circles to better approximate visible fish body
+        float base = Math.min(frameWidth, frameHeight) * 0.5f * 0.62f;
+        float centerX = halfW * 0.75f; // centroid ~ right 3/4 for Fish6
+        List<MultiCircleCollision.Circle> circles = new ArrayList<>();
+        // Re-introduce two right-side circles (head + main body) enlarged by 1.5x
+        circles.add(new MultiCircleCollision.Circle(centerX - 20f, halfH * 0.20f, base )); // main body (scaled down)
+        // mid/tail coverage
+        circles.add(new MultiCircleCollision.Circle(centerX - halfW * 0.30f, halfH * 0.12f, base * 0.7f));
+        circles.add(new MultiCircleCollision.Circle(centerX - halfW * 0.62f, halfH * 0.20f, base * 0.45f));
+        circles.add(new MultiCircleCollision.Circle(centerX - halfW * 0.88f, halfH * 0.16f, base * 0.32f));
+        // add two more small left-side filler circles sized similar to Fish1's smallest circle
+        float refSmallRadius = Math.min(frameWidth, frameHeight) * 0.077f; // derived from Fish1 small circle
+        circles.add(new MultiCircleCollision.Circle(centerX - halfW * 1.12f, halfH * 0.18f, refSmallRadius));
+        circles.add(new MultiCircleCollision.Circle(centerX - halfW * 1.38f, halfH * 0.16f, refSmallRadius));
+        f.setCollisionCircles(circles);
         return f;
     }
 }

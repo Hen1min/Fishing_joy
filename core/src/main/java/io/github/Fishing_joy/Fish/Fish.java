@@ -3,6 +3,9 @@ package io.github.Fishing_joy.Fish;
 import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import java.util.List;
+import java.util.ArrayList;
+import io.github.Fishing_joy.util.MultiCircleCollision;
 
 /**
  * 表示一条鱼的基础数据和行为：
@@ -34,6 +37,9 @@ public class Fish {
     // collision radius used for simplified circle-based collision detection.
     // If <= 0, getCollisionRadius() will compute a reasonable default from sprite size.
     private float collisionRadius = -1f;
+
+    // Multi-circle collision approximation (sprite-local coords, center at sprite center)
+    private List<MultiCircleCollision.Circle> collisionCircles = null;
 
     public float getWidth() {
         Animation<TextureRegion> a = dying ? caughtAnimation : swimAnimation;
@@ -187,6 +193,29 @@ public class Fish {
     /** Allow explicit tuning of the collision radius for this fish. */
     public void setCollisionRadius(float r) {
         this.collisionRadius = Math.max(0f, r);
+    }
+
+    /**
+     * Provide multi-circle collision approximation for this fish. Circles are in sprite-local
+     * coordinates where (0,0) is the sprite center used during rendering.
+     * If no circles were set, callers should assume a single circle at the sprite center with
+     * radius given by getCollisionRadius().
+     */
+    public void setCollisionCircles(List<MultiCircleCollision.Circle> circles) {
+        if (circles == null) {
+            this.collisionCircles = null;
+        } else {
+            this.collisionCircles = new ArrayList<>(circles);
+        }
+    }
+
+    public List<MultiCircleCollision.Circle> getCollisionCircles() {
+        if (this.collisionCircles == null || this.collisionCircles.isEmpty()) {
+            List<MultiCircleCollision.Circle> def = new ArrayList<>();
+            def.add(new MultiCircleCollision.Circle(0f, 0f, getCollisionRadius()));
+            return def;
+        }
+        return this.collisionCircles;
     }
 
     /**

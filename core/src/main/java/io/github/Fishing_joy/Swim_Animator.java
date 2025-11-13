@@ -37,6 +37,7 @@ import io.github.Fishing_joy.Fish.Fish4;
 import io.github.Fishing_joy.Fish.Fish5;
 import io.github.Fishing_joy.Fish.Fish6;
 import io.github.Fishing_joy.Fish.Fish7;
+import io.github.Fishing_joy.util.MultiCircleCollision;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -863,16 +864,10 @@ public class Swim_Animator implements ApplicationListener {
                     if (b.isCaptured()) continue;
                     float bx = b.getX();
                     float by = b.getY();
-                    float bw = b.getWidth();
-                    float bh = b.getHeight();
-                    float bRotation = b.getAngleDeg() - 80f; // match rendering rotation
-                    float[] bPoly = CollisionUtil.buildRectPoly(bx, by, bw, bh, bRotation);
-                    for (int i = 0; i < bPoly.length; i += 2) {
-                        int ni = (i + 2) % bPoly.length;
-                        shapeRenderer.line(bPoly[i], bPoly[i+1], bPoly[ni], bPoly[ni+1]);
-                    }
+                    float br = b.getCollisionRadius();
+                    shapeRenderer.circle(bx, by, br);
                 }
-                // fish: green
+                // fish: green (draw each collision circle)
                 shapeRenderer.setColor(0f, 1f, 0f, 1f);
                 for (FishEntity fe : fishEntities) {
                     float fw = fe.fish.getWidth();
@@ -880,10 +875,10 @@ public class Swim_Animator implements ApplicationListener {
                     float fCenterX = fe.x + fw / 2f;
                     float fCenterY = fe.y + fh / 2f;
                     float fRotation = fe.angle;
-                    float[] fPoly = CollisionUtil.buildRectPoly(fCenterX, fCenterY, fw, fh, fRotation);
-                    for (int i = 0; i < fPoly.length; i += 2) {
-                        int ni = (i + 2) % fPoly.length;
-                        shapeRenderer.line(fPoly[i], fPoly[i+1], fPoly[ni], fPoly[ni+1]);
+                    java.util.List<MultiCircleCollision.Circle> circles = fe.fish.getCollisionCircles();
+                    for (MultiCircleCollision.Circle c : circles) {
+                        float[] p = MultiCircleCollision.rotatePoint(c.x, c.y, fRotation);
+                        shapeRenderer.circle(fCenterX + p[0], fCenterY + p[1], c.r);
                     }
                 }
                 shapeRenderer.end();
@@ -1247,9 +1242,11 @@ public class Swim_Animator implements ApplicationListener {
                 float fCenterX = fe.x + fw / 2f;
                 float fCenterY = fe.y + fh / 2f;
                 float fRotation = fe.angle;
-                float[] fPoly = CollisionUtil.buildRectPoly(fCenterX, fCenterY, fw, fh, fRotation);
 
-                if (CollisionUtil.polygonsIntersect(bPoly, fPoly)) {
+                float br = b.getCollisionRadius();
+                boolean hit = MultiCircleCollision.bulletHitsSpriteCircles(bx, by, br, fCenterX, fCenterY, fRotation, fe.fish.getCollisionCircles());
+
+                if (hit) {
                     int dmg = b.getDamage();
                     boolean died = fe.fish.takeDamage(dmg);
                     Gdx.app.log("Game","Bullet hit fish: dmg=" + dmg + " hpRemaining=" + fe.fish.getCurrentHp());

@@ -4,6 +4,9 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import java.util.ArrayList;
+import java.util.List;
+import io.github.Fishing_joy.util.MultiCircleCollision;
 
 /**
  * Fish1 is a helper/factory for creating Fish instances of type Fish1.
@@ -96,6 +99,18 @@ public class Fish4 {
         int frameHeight = texture.getHeight() / FRAME_COUNT;
         float tunedRadius = Math.min(frameWidth, frameHeight) * 0.5f * 0.6f; // 60% of half-min-dim
         f.setCollisionRadius(tunedRadius);
+        float halfW = frameWidth / 2f;
+        float halfH = frameHeight / 2f;
+        // enlarge and lift collision circles to cover fish body (avoid shadow)
+        float base = Math.min(frameWidth, frameHeight) * 0.5f * 0.6f;
+        float centerX = halfW * 0.12f; // slight right bias for Fish4
+        List<MultiCircleCollision.Circle> circles = new ArrayList<>();
+        circles.add(new MultiCircleCollision.Circle(centerX + halfW * 0.18f, halfH * 0.20f + 10f, base * 0.92f));
+        circles.add(new MultiCircleCollision.Circle(centerX - halfW * 0.30f, halfH * 0.20f + 10f, base * 0.75f));
+        // left-side filler circles
+        circles.add(new MultiCircleCollision.Circle(centerX - halfW * 0.62f, halfH * 0.20f + 10f, base * 0.40f));
+        circles.add(new MultiCircleCollision.Circle(centerX - halfW * 0.82f, halfH * 0.16f + 10f, base * 0.28f));
+        f.setCollisionCircles(circles);
         return f;
     }
 }

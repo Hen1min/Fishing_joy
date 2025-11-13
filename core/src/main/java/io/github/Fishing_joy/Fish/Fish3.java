@@ -4,6 +4,9 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import java.util.ArrayList;
+import java.util.List;
+import io.github.Fishing_joy.util.MultiCircleCollision;
 
 /**
  * Fish1 is a helper/factory for creating Fish instances of type Fish1.
@@ -42,51 +45,29 @@ public class Fish3 {
         int frameWidth = texture.getWidth();
         int frameHeight = texture.getHeight() / FRAME_COUNT;
         TextureRegion[] frames = new TextureRegion[FRAME_COUNT];
-        for (int i = 0; i < FRAME_COUNT; i++) {
-            frames[i] = new TextureRegion(texture, 0, i * frameHeight, frameWidth, frameHeight);
-        }
-        // First half are swim frames, second half are caught frames (based on user's sprite layout)
+        for (int i = 0; i < FRAME_COUNT; i++) frames[i] = new TextureRegion(texture, 0, i * frameHeight, frameWidth, frameHeight);
         int half = FRAME_COUNT / 2;
         TextureRegion[] swimFrames = new TextureRegion[half];
         TextureRegion[] caughtFrames = new TextureRegion[FRAME_COUNT - half];
         System.arraycopy(frames, 0, swimFrames, 0, half);
         System.arraycopy(frames, half, caughtFrames, 0, FRAME_COUNT - half);
-
         swimAnimation = new Animation<>(FRAME_DURATION, swimFrames);
         swimAnimation.setPlayMode(Animation.PlayMode.LOOP);
-
         caughtAnimation = new Animation<>(FRAME_DURATION, caughtFrames);
         caughtAnimation.setPlayMode(Animation.PlayMode.NORMAL);
-
         loaded = true;
     }
 
     // 释放纹理（在退出或切换时调用）
     public static void dispose() {
-        if (texture != null) {
-            texture.dispose();
-            texture = null;
-        }
-        swimAnimation = null;
-        caughtAnimation = null;
-        loaded = false;
+        if (texture != null) { texture.dispose(); texture = null; }
+        swimAnimation = null; caughtAnimation = null; loaded = false;
     }
 
     // Provide accessors so other systems can use the animation
-    public static Animation<TextureRegion> getSwimAnimation() {
-        if (!loaded) load();
-        return swimAnimation;
-    }
-
-    public static Animation<TextureRegion> getCaughtAnimation() {
-        if (!loaded) load();
-        return caughtAnimation;
-    }
-
-    public static Texture getTexture() {
-        if (!loaded) load();
-        return texture;
-    }
+    public static Animation<TextureRegion> getSwimAnimation() { if (!loaded) load(); return swimAnimation; }
+    public static Animation<TextureRegion> getCaughtAnimation() { if (!loaded) load(); return caughtAnimation; }
+    public static Texture getTexture() { if (!loaded) load(); return texture; }
 
     // Factory: create a Fish instance for Fish1 with the type's default speed
     public static Fish create() {
@@ -96,6 +77,23 @@ public class Fish3 {
         int frameHeight = texture.getHeight() / FRAME_COUNT;
         float tunedRadius = Math.min(frameWidth, frameHeight) * 0.5f * 0.6f; // 60% of half-min-dim
         f.setCollisionRadius(tunedRadius);
+
+        float halfW = frameWidth / 2f; float halfH = frameHeight / 2f;
+        // larger base and lift circles upward to better match visible fish body
+        float base = Math.min(frameWidth, frameHeight) * 0.5f * 0.6f; // slightly larger
+        // centroid at right quarter (shifted right)
+        float centerX = halfW * 0.25f;
+        List<MultiCircleCollision.Circle> circles = new ArrayList<>();
+        // main upper body
+        circles.add(new MultiCircleCollision.Circle(centerX, halfH * 0.20f, base));
+        // head/front more to the right and up
+        circles.add(new MultiCircleCollision.Circle(centerX + halfW * 0.22f, halfH * 0.22f, base * 0.95f));
+        // tail on left side, smaller
+        circles.add(new MultiCircleCollision.Circle(centerX - halfW * 0.40f, halfH * 0.12f, base * 0.65f));
+        // small filler circles on left (same height) to cover remaining body
+        circles.add(new MultiCircleCollision.Circle(centerX - halfW * 0.62f, halfH * 0.20f, base * 0.40f));
+        circles.add(new MultiCircleCollision.Circle(centerX - halfW * 0.82f, halfH * 0.18f, base * 0.28f));
+        f.setCollisionCircles(circles);
         return f;
     }
 }

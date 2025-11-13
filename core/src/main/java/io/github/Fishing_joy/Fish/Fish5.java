@@ -4,6 +4,9 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import java.util.ArrayList;
+import java.util.List;
+import io.github.Fishing_joy.util.MultiCircleCollision;
 
 /**
  * Fish1 is a helper/factory for creating Fish instances of type Fish1.
@@ -96,6 +99,21 @@ public class Fish5 {
         int frameHeight = texture.getHeight() / FRAME_COUNT;
         float tunedRadius = Math.min(frameWidth, frameHeight) * 0.5f * 0.6f; // 60% of half-min-dim
         f.setCollisionRadius(tunedRadius);
+        float halfW = frameWidth / 2f;
+        float halfH = frameHeight / 2f;
+        // enlarge and lift so collision circles cover the fish body rather than the shadow
+        float base = Math.min(frameWidth, frameHeight) * 0.5f * 0.62f; // larger for bigger fish
+        float centerX = halfW * 0.75f; // centroid roughly at right 3/4
+        List<MultiCircleCollision.Circle> circles = new ArrayList<>();
+        circles.add(new MultiCircleCollision.Circle(centerX - halfW * 0.30f, halfH * 0.12f, base * 0.7f));
+        // left-side fillers at same height to encompass remaining body
+        circles.add(new MultiCircleCollision.Circle(centerX - halfW * 0.62f, halfH * 0.20f, base * 0.45f));
+        circles.add(new MultiCircleCollision.Circle(centerX - halfW * 0.88f, halfH * 0.16f, base * 0.32f));
+        // add two more small left-side filler circles sized similar to Fish1's smallest circle
+        float refSmallRadius = Math.min(frameWidth, frameHeight) * 0.077f; // derived from Fish1: 0.5*0.55*0.28 = 0.077
+        circles.add(new MultiCircleCollision.Circle(centerX - halfW * 1.12f, halfH * 0.18f, refSmallRadius * 0.8f));
+        circles.add(new MultiCircleCollision.Circle(centerX - halfW * 1.38f, halfH * 0.16f, refSmallRadius * 0.5f));
+        f.setCollisionCircles(circles);
         return f;
     }
 }
