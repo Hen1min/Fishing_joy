@@ -19,12 +19,16 @@ import io.github.Fishing_joy.Bullet.Bullet2;
 import io.github.Fishing_joy.Bullet.Bullet3;
 import io.github.Fishing_joy.Bullet.Bullet4;
 import io.github.Fishing_joy.Bullet.Bullet5;
+import io.github.Fishing_joy.Bullet.Bullet6;
+import io.github.Fishing_joy.Bullet.Bullet7;
 import io.github.Fishing_joy.Cannon.Cannon;
 import io.github.Fishing_joy.Cannon.Cannon1;
 import io.github.Fishing_joy.Cannon.Cannon2;
 import io.github.Fishing_joy.Cannon.Cannon3;
 import io.github.Fishing_joy.Cannon.Cannon4;
 import io.github.Fishing_joy.Cannon.Cannon5;
+import io.github.Fishing_joy.Cannon.Cannon6;
+import io.github.Fishing_joy.Cannon.Cannon7;
 import io.github.Fishing_joy.Fish.Fish;
 import io.github.Fishing_joy.Fish.Fish1;
 import io.github.Fishing_joy.Fish.Fish2;
@@ -192,6 +196,8 @@ public class Swim_Animator implements ApplicationListener {
         Cannon3.load();
         Cannon4.load();
         Cannon5.load();
+        Cannon6.load();
+        Cannon7.load();
 
         // Preload bullet texture
         Bullet1.load();
@@ -199,6 +205,8 @@ public class Swim_Animator implements ApplicationListener {
         Bullet3.load();
         Bullet4.load();
         Bullet5.load();
+        Bullet6.load();
+        Bullet7.load();
         // simple bitmap font for HUD
         // Use LibGDX built-in BitmapFont instead of FreeType
         try {
@@ -1096,7 +1104,7 @@ public class Swim_Animator implements ApplicationListener {
                 if (isPointInLeftIcon(world.x, world.y)) {
                      iconLeftPressed = true;
                      iconLeftPressTime = 0f;
-                     int levels = 5;
+                     int levels = 7;
                      currentCannonLevel = (currentCannonLevel - 2 + levels) % levels + 1; // downgrade
                      float ang = cannon.getAngleDeg();
                      float cx = cannon.getX();
@@ -1106,7 +1114,9 @@ public class Swim_Animator implements ApplicationListener {
                      else if (currentCannonLevel == 2) newC = new Cannon2(cx, cy);
                      else if (currentCannonLevel == 3) newC = new Cannon3(cx, cy);
                      else if (currentCannonLevel == 4) newC = new Cannon4(cx, cy);
-                     else newC = new Cannon5(cx, cy);
+                     else if (currentCannonLevel == 5) newC = new Cannon5(cx, cy);
+                     else if (currentCannonLevel == 6) newC = new Cannon6(cx, cy);
+                     else newC = new Cannon7(cx, cy);
                     // if berserk active, ensure new cannon has berserk cooldown
                     if (berserkActive) {
                          newC.setFireCooldown(0.25f);
@@ -1120,7 +1130,7 @@ public class Swim_Animator implements ApplicationListener {
                 if (isPointInRightIcon(world.x, world.y)) {
                      iconRightPressed = true;
                      iconRightPressTime = 0f;
-                     int levels = 5;
+                     int levels = 7;
                      currentCannonLevel = (currentCannonLevel % levels) + 1; // upgrade
                      float ang = cannon.getAngleDeg();
                      float cx = cannon.getX();
@@ -1131,7 +1141,9 @@ public class Swim_Animator implements ApplicationListener {
                      else if (currentCannonLevel == 2) newC = new Cannon2(cx, cy);
                      else if (currentCannonLevel == 3) newC = new Cannon3(cx, cy);
                      else if (currentCannonLevel == 4) newC = new Cannon4(cx, cy);
-                     else newC = new Cannon5(cx, cy);
+                     else if (currentCannonLevel == 5) newC = new Cannon5(cx, cy);
+                     else if (currentCannonLevel == 6) newC = new Cannon6(cx, cy);
+                     else newC = new Cannon7(cx, cy);
 
                      if (berserkActive) {
                          newC.setFireCooldown(0.25f);
@@ -1161,8 +1173,12 @@ public class Swim_Animator implements ApplicationListener {
                         b = new Bullet3(muzzle[0], muzzle[1], cannon.getAngleDeg() + 90f);
                     } else if (level == 4){
                         b = new Bullet4(muzzle[0], muzzle[1], cannon.getAngleDeg() + 90f);
-                    } else {
+                    } else if (level == 5){
                         b = new Bullet5(muzzle[0], muzzle[1], cannon.getAngleDeg() + 90f);
+                    } else if (level == 6){
+                        b = new Bullet6(muzzle[0], muzzle[1], cannon.getAngleDeg() + 90f);
+                    } else {
+                        b = new Bullet7(muzzle[0], muzzle[1], cannon.getAngleDeg() + 90f);
                     }
 
                     int cost = b.getCost();
@@ -1328,12 +1344,16 @@ public class Swim_Animator implements ApplicationListener {
         Cannon3.disposeStatic();
         Cannon4.disposeStatic();
         Cannon5.disposeStatic();
+        Cannon6.disposeStatic();
+        Cannon7.disposeStatic();
         // Dispose bullet textures
         Bullet1.disposeTexture();
         Bullet2.disposeTexture();
         Bullet3.disposeTexture();
         Bullet4.disposeTexture();
         Bullet5.disposeTexture();
+        Bullet6.disposeTexture();
+        Bullet7.disposeTexture();
 
         // Dispose audio manager
         AudioManager.disposeIfExists();
