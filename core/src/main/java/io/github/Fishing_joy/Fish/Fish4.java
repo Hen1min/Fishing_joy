@@ -28,7 +28,7 @@ public class Fish4 {
     private static final String DEFAULT_NAME = "Fish4";
     private static final int DEFAULT_HP = 70;
     private static final int DEFAULT_POINTS = 92;
-    private static final int DEFAULT_ENERGY = 3;
+    private static final int DEFAULT_ENERGY = 2;
     private static final float DEFAULT_SPEED = 19f; // units per second (pixels or world units)
 
     private Fish4() {

@@ -189,6 +189,21 @@ public class Fish {
         this.collisionRadius = Math.max(0f, r);
     }
 
+    /**
+     * Return a representative TextureRegion for this fish (used for UI thumbnails).
+     * Prefers the first frame of the swim animation; falls back to the first caught frame
+     * if swim animation is not available. Returns null if no animation/texture exists.
+     */
+    public TextureRegion getRepresentativeFrame() {
+        if (swimAnimation != null) {
+            return swimAnimation.getKeyFrame(0f);
+        }
+        if (caughtAnimation != null) {
+            return caughtAnimation.getKeyFrame(0f);
+        }
+        return null;
+    }
+
     public boolean isDead() {
         return currentHp <= 0;
     }

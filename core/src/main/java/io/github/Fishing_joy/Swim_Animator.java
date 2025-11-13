@@ -5,6 +5,7 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.g2d.GlyphLayout;
@@ -18,17 +19,21 @@ import io.github.Fishing_joy.Bullet.Bullet1;
 import io.github.Fishing_joy.Bullet.Bullet2;
 import io.github.Fishing_joy.Bullet.Bullet3;
 import io.github.Fishing_joy.Bullet.Bullet4;
+import io.github.Fishing_joy.Bullet.Bullet5;
 import io.github.Fishing_joy.Cannon.Cannon;
 import io.github.Fishing_joy.Cannon.Cannon1;
 import io.github.Fishing_joy.Cannon.Cannon2;
 import io.github.Fishing_joy.Cannon.Cannon3;
 import io.github.Fishing_joy.Cannon.Cannon4;
+import io.github.Fishing_joy.Cannon.Cannon5;
 import io.github.Fishing_joy.Fish.Fish;
 import io.github.Fishing_joy.Fish.Fish1;
 import io.github.Fishing_joy.Fish.Fish2;
 import io.github.Fishing_joy.Fish.Fish3;
 import io.github.Fishing_joy.Fish.Fish4;
 import io.github.Fishing_joy.Fish.Fish5;
+import io.github.Fishing_joy.Fish.Fish6;
+import io.github.Fishing_joy.Fish.Fish7;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -83,7 +88,50 @@ public class Swim_Animator implements ApplicationListener {
     // A variable for tracking elapsed time used for global operations
     float FishGeneratorGapTime;
 
+    // Start screen state and button geometry
+    private boolean started = false; // whether the main game has started
+    private float startBtnX = 0f;
+    private float startBtnY = 0f;
+    private float startBtnW = 300f;
+    private float startBtnH = 90f;
+    // animation: gradient phase for START button (edge:white -> center:orange)
+    private float startGradientAnimTime = 0f;
+    private final float startGradientDuration = 3.5f; // seconds to approach final gradient
+    // (ring count for START button gradient is allocated locally in render)
 
+    // Track START button touch/press state so we can render a narrow shadow when pressed
+    private boolean startTouchActive = false; // true if touch started inside START button
+    private boolean startPressed = false;     // true while touch is held inside START button
+
+    // Help (简介) button geometry + state (placed under START button on the start screen)
+    private float helpBtnX = 0f;
+    private float helpBtnY = 0f;
+    private float helpBtnW = 80f;
+    private float helpBtnH = 80f;
+    private boolean helpTouchActive = false;
+    private boolean helpPressed = false;
+
+    // Whether the help/info overlay is currently visible
+    private boolean showHelpOverlay = false;
+
+    // Pause state and UI for in-game pause/continue toggle (shown when started)
+    private boolean paused = false;
+    private float pauseBtnW = 110f;
+    private float pauseBtnH = 42f;
+    private float pauseBtnX = 0f;
+    private float pauseBtnY = 0f;
+    // pressed visual states for top-left/back and top-right/pause buttons
+    private boolean backPressed = false;
+    private boolean pausePressed = false;
+
+    // Back button (top-left) to return to start screen and stop music
+    private float backBtnW = 110f;
+    private float backBtnH = 42f;
+    private float backBtnX = 10f;
+    private float backBtnY = 10f;
+
+    // Prototypes for fish info display in the help overlay
+    private final java.util.List<Fish> helpFishPrototypes = new java.util.ArrayList<>();
 
     // A simple entity to hold a Fish and its position
     static class FishEntity {
@@ -147,14 +195,29 @@ public class Swim_Animator implements ApplicationListener {
         Cannon2.load();
         Cannon3.load();
         Cannon4.load();
+        Cannon5.load();
+
         // Preload bullet texture
         Bullet1.load();
         Bullet2.load();
         Bullet3.load();
         Bullet4.load();
+        Bullet5.load();
         // simple bitmap font for HUD
-        font = new BitmapFont();
-         // create SpriteBatch before Cannon instance so viewport sizes are usable
+        // Use LibGDX built-in BitmapFont instead of FreeType
+        try {
+            // If you have a .fnt file, you can load it with new BitmapFont(Gdx.files.internal("fonts/myfont.fnt"));
+            font = new BitmapFont();
+            font.getData().setScale(1f);
+            font.getCache().setUseIntegerPositions(true);
+            for (com.badlogic.gdx.graphics.g2d.TextureRegion region : font.getRegions()) {
+                com.badlogic.gdx.graphics.Texture tex = region.getTexture();
+                if (tex != null) tex.setFilter(com.badlogic.gdx.graphics.Texture.TextureFilter.Nearest, com.badlogic.gdx.graphics.Texture.TextureFilter.Nearest);
+            }
+        } catch (Exception e) {
+            // fallback to default font if anything goes wrong
+            font = new BitmapFont();
+        }
 
         // Load fish type resources
 
@@ -163,6 +226,18 @@ public class Swim_Animator implements ApplicationListener {
         Fish3.load();
         Fish4.load();
         Fish5.load();
+        Fish6.load();
+        Fish7.load();
+
+        // Populate help prototypes for the info overlay (name, hp, points, energy)
+        helpFishPrototypes.clear();
+        helpFishPrototypes.add(Fish1.create());
+        helpFishPrototypes.add(Fish2.create());
+        helpFishPrototypes.add(Fish3.create());
+        helpFishPrototypes.add(Fish4.create());
+        helpFishPrototypes.add(Fish5.create());
+        helpFishPrototypes.add(Fish6.create());
+        helpFishPrototypes.add(Fish7.create());
 
         // Create a few Fish instances at different positions with different speed
         // All Fish1 instances use the type default speed (Fish1.DEFAULT_SPEED internally)
@@ -176,6 +251,9 @@ public class Swim_Animator implements ApplicationListener {
         // Position cannon correctly relative to bottom bar
         resize(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
         FishGeneratorGapTime = 2.0f;
+
+        // Start screen initially shown; started=false
+        started = false;
     }
 
 
@@ -247,6 +325,33 @@ public class Swim_Animator implements ApplicationListener {
         }
     }
 
+    public void spawnFish6() {
+        Fish fish = Fish6.create();
+        float Num = MathUtils.random();
+        //fishEntities.add(new FishEntity(fish, -fish.getWidth(), MathUtils.random(0, viewport.getWorldHeight() - fish.getHeight()),MathUtils.random(0,360)));
+        if (Num<1/3f) {
+            fishEntities.add(new FishEntity(fish, -fish.getWidth(), MathUtils.random(0, viewport.getWorldHeight()), MathUtils.random(-45, 45), -1));//左边出
+        } else if (Num < 2/3f) {
+            fishEntities.add(new FishEntity(fish,  viewport.getWorldWidth() + fish.getWidth(), MathUtils.random(0,viewport.getWorldHeight()), MathUtils.random(135,225), 1));//右边出
+        } else {
+            fishEntities.add(new FishEntity(fish, MathUtils.random(0,viewport.getWorldWidth()) , viewport.getWorldHeight(), MathUtils.random(225,305), 0));//上边出
+        }
+    }
+
+    public void spawnFish7() {
+        Fish fish = Fish7.create();
+        float Num = MathUtils.random();
+        //fishEntities.add(new FishEntity(fish, -fish.getWidth(), MathUtils.random(0, viewport.getWorldHeight() - fish.getHeight()),MathUtils.random(0,360)));
+        if (Num<1/3f) {
+            fishEntities.add(new FishEntity(fish, -fish.getWidth(), MathUtils.random(0, viewport.getWorldHeight()), MathUtils.random(-45, 45), -1));//左边出
+        } else if (Num < 2/3f) {
+            fishEntities.add(new FishEntity(fish,  viewport.getWorldWidth() + fish.getWidth(), MathUtils.random(0,viewport.getWorldHeight()), MathUtils.random(135,225), 1));//右边出
+        } else {
+            fishEntities.add(new FishEntity(fish, MathUtils.random(0,viewport.getWorldWidth()) , viewport.getWorldHeight(), MathUtils.random(225,305), 0));//上边出
+        }
+    }
+
+
 
 
 
@@ -260,6 +365,35 @@ public class Swim_Animator implements ApplicationListener {
         if (cannon != null) {
             cannon.setPosition(viewport.getWorldWidth() / 2f + 25f, 12);
         }
+        // compute start button geometry centered in world coordinates
+        // compute base start button size (original behavior)
+        float baseStartW = Math.min(480f, viewport.getWorldWidth() * 0.32f);
+        float baseStartH = Math.min(140f, viewport.getWorldHeight() * 0.12f);
+        // scale down to 70% as requested, and keep it centered
+        startBtnW = baseStartW * 0.6f;
+        startBtnH = baseStartH * 0.6f;
+        startBtnX = (viewport.getWorldWidth() - startBtnW) / 2f;
+        startBtnY = (viewport.getWorldHeight() - startBtnH) / 2f;
+
+        // compute help button geometry (fixed size) centered under start button
+        helpBtnW = Math.min(80f, startBtnW * 0.25f);
+        helpBtnH = Math.min(80f, startBtnH * 0.25f);
+        helpBtnX = startBtnX + (startBtnW - helpBtnW) / 2f;
+        helpBtnY = startBtnY - helpBtnH - 10f; // 10 pixels padding
+
+        // compute pause button geometry (fixed size) anchored to top-right corner
+        // Make pause button even smaller per user's request
+        pauseBtnW = Math.min(70f, viewport.getWorldWidth() * 0.09f);
+        pauseBtnH = Math.min(28f, viewport.getWorldHeight() * 0.06f);
+        pauseBtnX = viewport.getWorldWidth() - pauseBtnW - 6f; // 6 pixels padding from right
+        pauseBtnY = viewport.getWorldHeight() - pauseBtnH - 6f; // 6 pixels padding from top
+
+        // compute back button geometry (fixed size) anchored to top-left corner
+        // Make back button match the smaller pause button sizing
+        backBtnW = Math.min(70f, viewport.getWorldWidth() * 0.09f);
+        backBtnH = Math.min(28f, viewport.getWorldHeight() * 0.06f);
+        backBtnX = 6f; // fixed padding from left
+        backBtnY = viewport.getWorldHeight() - backBtnH - 6f; // 6 pixels padding from top
     }
 
     @Override
@@ -289,6 +423,278 @@ public class Swim_Animator implements ApplicationListener {
                 // Draw background stretched to viewport size
                 spriteBatch.draw(bgTexture, 0, 0, viewport.getWorldWidth(), viewport.getWorldHeight());
             }
+
+            // If the game hasn't started yet, draw START button overlay and skip the main game rendering
+            if (!started) {
+                spriteBatch.end();
+                // draw a radial gradient button by rendering concentric filled circles with interpolated colors
+                if (shapeRenderer != null) {
+                    shapeRenderer.setProjectionMatrix(viewport.getCamera().combined);
+                    shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+
+                    float cx = startBtnX + startBtnW / 2f;
+                    float cy = startBtnY + startBtnH / 2f;
+                    float outerW = startBtnW;
+                    float outerH = startBtnH;
+
+                    // progress 0..1, use a root (ease-in for orange expansion) so orange quickly occupies most area then slows
+                    float progress = MathUtils.clamp(startGradientAnimTime / startGradientDuration, 0f, 1f);
+                    float eased = (float)Math.pow(progress, 1f / 3f); // root makes early growth faster
+
+                    // inner fraction threshold: as eased goes from 0->1 the innerFraction goes 1->0 so
+                    // orange area grows over time (small orange at start, large orange at end)
+                    float innerFraction = 1f - eased;
+
+                    float baseCorner = Math.min(outerW, outerH) * 0.18f; // corner radius for outermost ring
+
+                    // If the start button is pressed, draw a narrow semi-transparent shadow rounded rect slightly outside the button
+                    if (startPressed) {
+                        float pad = Math.min(8f, Math.min(outerW, outerH) * 0.06f); // narrow padding for shadow
+                        float sw = outerW + pad * 2f;
+                        float sh = outerH + pad * 2f;
+                        float sx = cx - sw / 2f;
+                        float sy = cy - sh / 2f;
+                        float cornerShadow = Math.min(baseCorner + pad, Math.min(sw, sh) * 0.18f);
+                        // shadow color: semi-transparent black
+                        shapeRenderer.setColor(0f, 0f, 0f, 0.45f);
+                        // draw rounded rect: center rect + sides + corner circles
+                        float innerW = Math.max(0f, sw - 2f * cornerShadow);
+                        float innerH = Math.max(0f, sh - 2f * cornerShadow);
+                        if (innerW > 0f && innerH > 0f) {
+                            shapeRenderer.rect(sx + cornerShadow, sy + cornerShadow, innerW, innerH);
+                        }
+                        if (innerW > 0f) {
+                            shapeRenderer.rect(sx + cornerShadow, sy, innerW, cornerShadow);
+                            shapeRenderer.rect(sx + cornerShadow, sy + sh - cornerShadow, innerW, cornerShadow);
+                        }
+                        if (innerH > 0f) {
+                            shapeRenderer.rect(sx, sy + cornerShadow, cornerShadow, innerH);
+                            shapeRenderer.rect(sx + sw - cornerShadow, sy + cornerShadow, cornerShadow, innerH);
+                        }
+                        if (cornerShadow > 0f) {
+                            shapeRenderer.circle(sx + cornerShadow, sy + cornerShadow, cornerShadow);
+                            shapeRenderer.circle(sx + sw - cornerShadow, sy + cornerShadow, cornerShadow);
+                            shapeRenderer.circle(sx + cornerShadow, sy + sh - cornerShadow, cornerShadow);
+                            shapeRenderer.circle(sx + sw - cornerShadow, sy + sh - cornerShadow, cornerShadow);
+                        }
+                    }
+
+                    // (ring count for START button gradient is allocated locally in render)
+                    int rings = 36; // local number of concentric rounded-rect rings used for gradient
+                    for (int i = rings - 1; i >= 0; i--) {
+                        float radiusFrac = (float)i / (rings - 1); // 1 outer -> 0 inner
+                        float w = Math.max(0f, outerW * radiusFrac);
+                        float h = Math.max(0f, outerH * radiusFrac);
+                        if (w <= 0f || h <= 0f) continue;
+                        float x = cx - w / 2f;
+                        float y = cy - h / 2f;
+
+                        float centerFrac = 1f - radiusFrac; // 0 at edge -> 1 at center
+                        float t;
+                        if (centerFrac >= innerFraction) {
+                            t = 1f; // fully orange
+                        } else if (innerFraction <= 0f) {
+                            t = 0f;
+                        } else {
+                            t = MathUtils.clamp(centerFrac / innerFraction, 0f, 1f);
+                        }
+
+                        // lerp white -> orange (orange = 1,0.65,0)
+                        float rcol = 1f;
+                        float gcol = (1f - t) + 0.65f * t;
+                        float bcol = (1f - t);
+                        shapeRenderer.setColor(rcol, gcol, bcol, 1f);
+
+                        float corner = baseCorner * radiusFrac; // scale corner radius with size so inner roundedness stays proportional
+                        // draw rounded rect: center rect + edge rects + corner circles
+                        float innerW = Math.max(0f, w - 2f * corner);
+                        float innerH = Math.max(0f, h - 2f * corner);
+                        if (innerW > 0f && innerH > 0f) {
+                            shapeRenderer.rect(x + corner, y + corner, innerW, innerH);
+                        }
+                        // sides
+                        if (innerW > 0f) {
+                            shapeRenderer.rect(x + corner, y, innerW, corner); // bottom
+                            shapeRenderer.rect(x + corner, y + h - corner, innerW, corner); // top
+                        }
+                        if (innerH > 0f) {
+                            shapeRenderer.rect(x, y + corner, corner, innerH); // left
+                            shapeRenderer.rect(x + w - corner, y + corner, corner, innerH); // right
+                        }
+                        // corners
+                        if (corner > 0f) {
+                            shapeRenderer.circle(x + corner, y + corner, corner);
+                            shapeRenderer.circle(x + w - corner, y + corner, corner);
+                            shapeRenderer.circle(x + corner, y + h - corner, corner);
+                            shapeRenderer.circle(x + w - corner, y + h - corner, corner);
+                        }
+                    }
+
+                    // Draw help button background (a circular button) with pressed shadow similar to START pressed style
+                    float hx = helpBtnX + helpBtnW / 2f;
+                    float hy = helpBtnY + helpBtnH / 2f;
+                    float hr = Math.min(helpBtnW, helpBtnH) / 2f;
+                    if (helpPressed) {
+                        // reduce pressed shadow radius by half (was hr + 6f)
+                        shapeRenderer.setColor(0f, 0f, 0f, 0.45f);
+                        shapeRenderer.circle(hx, hy, hr + 1.5f);
+                    }
+                    // help button base: light orange border with white fill
+                    shapeRenderer.setColor(1f, 0.85f, 0.55f, 1f);
+                    shapeRenderer.circle(hx, hy, hr);
+
+                    shapeRenderer.end();
+                }
+
+                // draw START text (use black and visually bolder by drawing multiple slightly-offset passes)
+                spriteBatch.begin();
+                if (font != null) {
+                    String text = "ENDLESS MODE";
+                    // choose scale based on button height; slightly larger than before to help bold look
+                    float scaleVal = Math.min(1.8f, startBtnH / 60f);
+                    font.getData().setScale(scaleVal);
+
+                    // compute per-character widths and total width with extra spacing
+                    GlyphLayout tmpGl = new GlyphLayout();
+                    float extraSpacing = scaleVal * 6f; // increased letter spacing (adjust this value to change spacing)
+                    float totalWidth = 0f;
+                    for (int i = 0; i < text.length(); i++) {
+                        String chs = String.valueOf(text.charAt(i));
+                        tmpGl.setText(font, chs);
+                        totalWidth += tmpGl.width;
+                        if (i < text.length() - 1) totalWidth += extraSpacing;
+                    }
+
+                    // compute vertical position using a representative glyph height
+                    GlyphLayout heightGl = new GlyphLayout(font, text);
+                    float txStart = startBtnX + (startBtnW - totalWidth) / 2f;
+                    float ty = startBtnY + (startBtnH + heightGl.height) / 2f;
+
+                    // black color for START text
+                    font.setColor(0f, 0f, 0f, 1f);
+                    // draw multiple slightly offset passes to simulate boldness, but draw per-character with extra spacing
+                    float boldOffset = Math.max(1f, scaleVal * 0.1f);
+                    float[][] passes = new float[][] { { -boldOffset, 0f }, { boldOffset, 0f }, { 0f, -boldOffset }, { 0f, boldOffset }, { 0f, 0f } };
+
+                    for (int p = 0; p < passes.length; p++) {
+                        float ox = passes[p][0];
+                        float oy = passes[p][1];
+                        float penX = txStart + ox;
+                        for (int i = 0; i < text.length(); i++) {
+                            String chs = String.valueOf(text.charAt(i));
+                            tmpGl.setText(font, chs);
+                            font.draw(spriteBatch, chs, penX, ty + oy);
+                            penX += tmpGl.width + extraSpacing;
+                        }
+                    }
+
+                    // Draw help button label '?' centered atop the circular button
+                    String q = "?";
+                    // choose a base scale for the help label, then enlarge by 2x to make '?' twice as big
+                    float baseQScale = Math.min(1f, helpBtnH / 60f);
+                    float qScale = baseQScale * 3.0f; // double size
+                    font.getData().setScale(qScale);
+                    font.setColor(0f, 0f, 0f, 1f);
+                    // center '?' within the circular help button using GlyphLayout (width/height measured at current scale)
+                    GlyphLayout qGl = new GlyphLayout(font, q);
+                    float qX = helpBtnX + helpBtnW * 0.5f - qGl.width / 2f;
+                    float qY = helpBtnY + helpBtnH * 0.5f + qGl.height / 2f;
+                    font.draw(spriteBatch, q, qX, qY);
+
+                     // restore font scale and color
+                     font.getData().setScale(1f);
+                     font.setColor(1f, 1f, 1f, 1f);
+                }
+                spriteBatch.end();
+
+                // If help overlay is visible, draw it on top and intercept input
+                if (showHelpOverlay) {
+                    if (shapeRenderer != null) {
+                        shapeRenderer.setProjectionMatrix(viewport.getCamera().combined);
+                        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+                        // dim background
+                        shapeRenderer.setColor(0f,0f,0f,0.6f);
+                        shapeRenderer.rect(0,0,viewport.getWorldWidth(), viewport.getWorldHeight());
+
+                        // draw centered panel
+                        float panelW = Math.min(viewport.getWorldWidth() * 0.9f, 800f);
+                        float panelH = Math.min(viewport.getWorldHeight() * 0.8f, 600f);
+                        float px = (viewport.getWorldWidth() - panelW) / 2f;
+                        float py = (viewport.getWorldHeight() - panelH) / 2f;
+                        shapeRenderer.setColor(0.98f, 0.95f, 0.9f, 1f);
+                        shapeRenderer.rect(px, py, panelW, panelH);
+                        shapeRenderer.end();
+                    }
+                    // draw fish info text inside panel
+                    spriteBatch.begin();
+                    if (font != null) {
+                        font.getData().setScale(1f);
+                        font.setColor(0f,0f,0f,1f);
+                        String title = "Fish Guide";
+                        float panelW = Math.min(viewport.getWorldWidth() * 0.9f, 800f);
+                        float panelH = Math.min(viewport.getWorldHeight() * 0.8f, 600f);
+                        float px = (viewport.getWorldWidth() - panelW) / 2f;
+                        float py = (viewport.getWorldHeight() - panelH) / 2f;
+                        GlyphLayout titleGl = new GlyphLayout(font, title);
+                        font.draw(spriteBatch, title, px + 20f, py + panelH - 20f);
+
+                        // Draw right-side help tips: Press D / Press P
+                        String tipLine1 = "Press D to see the HitBox.";
+                        String tipLine2 = "Press P to pause the game.";
+                        GlyphLayout tipGl = new GlyphLayout();
+                        tipGl.setText(font, tipLine1);
+                        float tipX = px + panelW - 20f - tipGl.width; // 20px padding from right
+                        float tipY = py + panelH - 40f; // a little below the title
+                        font.draw(spriteBatch, tipLine1, tipX, tipY);
+                        // second line below the first
+                        tipGl.setText(font, tipLine2);
+                        font.draw(spriteBatch, tipLine2, tipX, tipY - (tipGl.height + 6f));
+
+                        // list fish entries
+                        float y = py + panelH - 60f;
+                        // prepare a temporary layout to measure font line height for vertical centering
+                        GlyphLayout tmpMeasure = new GlyphLayout();
+                        tmpMeasure.setText(font, "M");
+                        float fontLineHeight = tmpMeasure.height;
+                        final float thumbMax = 48f; // max thumbnail size in pixels
+                        for (Fish f : helpFishPrototypes) {
+                            // draw thumbnail if available
+                            TextureRegion rep = f.getRepresentativeFrame();
+                            float drawX = px + 20f;
+                            float drawY = y - fontLineHeight / 2f; // will offset below to center
+                            float drawW = 0f, drawH = 0f;
+                            if (rep != null) {
+                                float rw = rep.getRegionWidth();
+                                float rh = rep.getRegionHeight();
+                                float scale = Math.min(thumbMax / rw, thumbMax / rh);
+                                drawW = rw * scale;
+                                drawH = rh * scale;
+                                // center thumbnail vertically relative to text baseline
+                                drawY = y - (fontLineHeight / 2f) - (drawH / 2f);
+                                spriteBatch.draw(rep, drawX, drawY, drawW, drawH);
+                            }
+
+                            // draw text next to thumbnail with small gap
+                            float textX = drawX + (drawW > 0f ? drawW + 8f : 0f);
+                            String line = String.format("%s    HP:%d    Points:%d    Energy:%d", f.getName(), f.getMaxHp(), f.getPoints(), f.getEnergy());
+                            font.draw(spriteBatch, line, textX, y);
+
+                            // advance y by the larger of font line height or thumbnail height plus padding
+                            float usedH = Math.max(fontLineHeight, drawH);
+                            y -= usedH + 8f; // spacing between entries
+                        }
+
+                        // hint to close
+                        String hint = "Tap anywhere to close";
+                        font.draw(spriteBatch, hint, px + 20f, py + 20f);
+                        font.setColor(1f,1f,1f,1f);
+                    }
+                    spriteBatch.end();
+                }
+
+                return; // skip normal game rendering until started
+            }
+
             for (FishEntity e : fishEntities) {
                 e.fish.render(spriteBatch, e.x, e.y, e.angle);
             }
@@ -385,7 +791,53 @@ public class Swim_Animator implements ApplicationListener {
                      spriteBatch.draw(fillRegion, barX, barY, srcW * scaleBar, barHeight);
                  }
 
-                // Draw berserk subtitle centered, scaling up and fading out
+                // Draw pause/continue button in the top-right using ShapeRenderer for background
+                // End the batch temporarily to draw the filled rect, then resume to draw text.
+                spriteBatch.end();
+                if (shapeRenderer != null && viewport != null) {
+                    shapeRenderer.setProjectionMatrix(viewport.getCamera().combined);
+                    // Use a rounded-gradient button to match START style, scaled for smaller buttons
+                    shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+                    // BACK button: neutral dark theme
+                    drawRoundedGradientButton(shapeRenderer, backBtnX, backBtnY, backBtnW, backBtnH, 0.22f, 0.22f, 0.22f, backPressed);
+                    // PAUSE/CONTINUE button: greenish when paused, dark otherwise
+                    if (paused) {
+                        drawRoundedGradientButton(shapeRenderer, pauseBtnX, pauseBtnY, pauseBtnW, pauseBtnH, 0.22f, 0.6f, 0.22f, pausePressed);
+                    } else {
+                        drawRoundedGradientButton(shapeRenderer, pauseBtnX, pauseBtnY, pauseBtnW, pauseBtnH, 0.22f, 0.22f, 0.22f, pausePressed);
+                    }
+                    shapeRenderer.end();
+                 }
+                 spriteBatch.begin();
+
+                 // Draw button label centered
+                 String pauseLabel = paused ? "CONTINUE" : "PAUSE";
+                 GlyphLayout pauseGl = new GlyphLayout(font, pauseLabel);
+                 // shrink button label fonts to 60% of the computed size
+                 float labelScale = 0.6f * Math.min(1.0f, pauseBtnH / (pauseGl.height + 6f));
+                 float oldScaleX = font.getData().scaleX;
+                 float oldScaleY = font.getData().scaleY;
+                 font.getData().setScale(labelScale);
+                 font.setColor(1f, 1f, 1f, 1f);
+                 pauseGl.setText(font, pauseLabel);
+                 float textX = pauseBtnX + (pauseBtnW - pauseGl.width) / 2f;
+                 float textY = pauseBtnY + (pauseBtnH + pauseGl.height) / 2f;
+                 font.draw(spriteBatch, pauseLabel, textX, textY);
+
+                 // Draw back button label
+                 String backLabel = "BACK";
+                 GlyphLayout backGl = new GlyphLayout(font, backLabel);
+                 float backLabelScale = 0.6f * Math.min(1.0f, backBtnH / (backGl.height + 6f));
+                 font.getData().setScale(backLabelScale);
+                 float backTextX = backBtnX + (backBtnW - backGl.width) / 2f;
+                 float backTextY = backBtnY + (backBtnH + backGl.height) / 2f;
+                 font.draw(spriteBatch, backLabel, backTextX, backTextY);
+
+                 // restore font
+                 font.getData().setScale(oldScaleX, oldScaleY);
+                 font.setColor(1f, 1f, 1f, 1f);
+
+                 // Draw berserk subtitle centered, scaling up and fading out
                 if (subtitleText != null) {
                     // subtitleTimer is incremented in update(); here compute where we are in the sequence
                     float t = subtitleTimer;
@@ -419,8 +871,8 @@ public class Swim_Animator implements ApplicationListener {
                     float startY = cy + (totalHeight / 2f) - (singleLineHeight * 0.25f);
 
                     // Save old font state
-                    float oldScaleX = font.getData().scaleX;
-                    float oldScaleY = font.getData().scaleY;
+                    float oldScaleX2 = font.getData().scaleX;
+                    float oldScaleY2 = font.getData().scaleY;
                     font.getData().setScale(scale);
                     font.setColor(1f, 0.65f, 0f, alpha); // orange color
 
@@ -448,7 +900,7 @@ public class Swim_Animator implements ApplicationListener {
                     }
 
                     // restore font
-                    font.getData().setScale(oldScaleX, oldScaleY);
+                    font.getData().setScale(oldScaleX2, oldScaleY2);
                     font.setColor(1f, 1f, 1f, 1f);
                 }
 
@@ -497,6 +949,174 @@ public class Swim_Animator implements ApplicationListener {
 
     public void update(){
         float delta = Gdx.graphics.getDeltaTime();
+        // update audio manager each frame (handles fades)
+        // Only update audio if the AudioManager singleton was already created (avoid creating it on app open)
+        AudioManager.updateIfExists(delta);
+
+        // -- Handle pause/unpause immediately to avoid any game-state changes on the same frame --
+        if (Gdx.input.justTouched()) {
+            int sx = Gdx.input.getX();
+            int sy = Gdx.input.getY();
+            Vector3 world = new Vector3(sx, sy, 0);
+            if (viewport != null) viewport.unproject(world);
+            // If touch begins inside BACK or PAUSE, set pressed visual and consume the touch
+            // but do NOT perform the action until release inside the same button.
+            if (isPointInBackButton(world.x, world.y) && started) {
+                backPressed = true;
+                // consume so other UI doesn't react to the same down event
+                return;
+            }
+            if (isPointInPauseButton(world.x, world.y)) {
+                pausePressed = true;
+                // consume so other UI doesn't react to the same down event
+                return;
+            }
+        }
+
+        // While touch is held, update top-left/top-right pressed visuals so they render properly
+        if (Gdx.input.isTouched()) {
+            int sx2 = Gdx.input.getX();
+            int sy2 = Gdx.input.getY();
+            Vector3 world2 = new Vector3(sx2, sy2, 0);
+            if (viewport != null) viewport.unproject(world2);
+            if (backPressed) backPressed = isPointInBackButton(world2.x, world2.y);
+            if (pausePressed) pausePressed = isPointInPauseButton(world2.x, world2.y);
+        } else {
+            // On release: if previous down began inside BACK/PAUSE and release is also inside, perform action
+            if (backPressed || pausePressed) {
+                int sxr = Gdx.input.getX();
+                int syr = Gdx.input.getY();
+                Vector3 worldr = new Vector3(sxr, syr, 0);
+                if (viewport != null) viewport.unproject(worldr);
+
+                if (backPressed) {
+                    boolean releasedInBack = isPointInBackButton(worldr.x, worldr.y);
+                    if (releasedInBack && started) {
+                        try { goBackToStart(); } catch (Exception ignored) {}
+                        Gdx.app.log("Game", "Back button pressed -> returning to start screen");
+                    }
+                }
+
+                if (pausePressed) {
+                    boolean releasedInPause = isPointInPauseButton(worldr.x, worldr.y);
+                    if (releasedInPause) {
+                        paused = !paused;
+                        try {
+                            if (paused) AudioManager.get().pausePlayback();
+                            else AudioManager.get().resumePlayback();
+                        } catch (Exception ignored) {}
+                        Gdx.app.log("Game", "Pause button pressed. paused=" + paused + ", world=(" + worldr.x + "," + worldr.y + ")");
+                    }
+                }
+            }
+
+            // clear transient pressed visuals on release
+            backPressed = false;
+            pausePressed = false;
+        }
+
+        // Process keyboard pause/unpause here so 'P' works even while paused (matches pause button behavior)
+        if (Gdx.input.isKeyJustPressed(Input.Keys.P)) {
+            paused = !paused;
+            try {
+                if (paused) AudioManager.get().pausePlayback();
+                else AudioManager.get().resumePlayback();
+            } catch (Exception ignored) {}
+            Gdx.app.log("Game", "Pause toggled by key P. paused=" + paused);
+            return; // consume frame so no state updates this frame
+        }
+
+        // If the game is paused, skip all game-state updates. We still processed pause/unpause input above
+        // so the player can unpause using the pause button or 'P' key while paused.
+        if (paused) {
+            return;
+        }
+
+        // If the game hasn't started yet, advance the START button gradient animation and check for clicks
+        if (!started) {
+            // If help overlay is visible, a tap anywhere should close it
+            if (showHelpOverlay) {
+                if (Gdx.input.justTouched()) {
+                    showHelpOverlay = false;
+                }
+                // While overlay is visible, do not process other start-screen input
+                return;
+            }
+
+            // Touch down: if pointer just touched and the touch began inside the start button or help button, mark active pressed state
+            if (Gdx.input.justTouched()) {
+                int sx = Gdx.input.getX();
+                int sy = Gdx.input.getY();
+                Vector3 world = new Vector3(sx, sy, 0);
+                if (viewport != null) viewport.unproject(world);
+
+                boolean inStart = world.x >= startBtnX && world.x <= startBtnX + startBtnW && world.y >= startBtnY && world.y <= startBtnY + startBtnH;
+                boolean inHelp = world.x >= helpBtnX && world.x <= helpBtnX + helpBtnW && world.y >= helpBtnY && world.y <= helpBtnY + helpBtnH;
+
+                if (inHelp) {
+                    helpTouchActive = true;
+                    helpPressed = true;
+                    // don't set start touch when help was pressed
+                    startTouchActive = false;
+                    startPressed = false;
+                } else if (inStart) {
+                    startTouchActive = true;
+                    startPressed = true;
+                    helpTouchActive = false;
+                    helpPressed = false;
+                } else {
+                    startTouchActive = false;
+                    startPressed = false;
+                    helpTouchActive = false;
+                    helpPressed = false;
+                }
+            }
+
+            // While touch is held, update pressed flag depending on whether pointer remains inside respective button
+            if (Gdx.input.isTouched()) {
+                int sx = Gdx.input.getX();
+                int sy = Gdx.input.getY();
+                Vector3 world = new Vector3(sx, sy, 0);
+                if (viewport != null) viewport.unproject(world);
+                boolean insideStart = world.x >= startBtnX && world.x <= startBtnX + startBtnW && world.y >= startBtnY && world.y <= startBtnY + startBtnH;
+                boolean insideHelp = world.x >= helpBtnX && world.x <= helpBtnX + helpBtnW && world.y >= helpBtnY && world.y <= helpBtnY + helpBtnH;
+                if (startTouchActive) startPressed = insideStart;
+                if (helpTouchActive) helpPressed = insideHelp;
+            }
+
+            // On touch release: if the touch began inside the start button and the release is also inside, start the game
+            if (!Gdx.input.isTouched() && (startTouchActive || helpTouchActive)) {
+                int sx = Gdx.input.getX();
+                int sy = Gdx.input.getY();
+                Vector3 world = new Vector3(sx, sy, 0);
+                if (viewport != null) viewport.unproject(world);
+
+                if (helpTouchActive) {
+                    boolean releasedInHelp = world.x >= helpBtnX && world.x <= helpBtnX + helpBtnW && world.y >= helpBtnY && world.y <= helpBtnY + helpBtnH;
+                    if (releasedInHelp) {
+                        // open the help overlay
+                        showHelpOverlay = true;
+                    }
+                    helpTouchActive = false;
+                    helpPressed = false;
+                }
+
+                if (startTouchActive) {
+                    // Use startBtnH here (was incorrectly using helpBtnH) so the release-hitbox matches the START button height
+                    boolean releasedInStart = world.x >= startBtnX && world.x <= startBtnX + startBtnW && world.y >= startBtnY && world.y <= startBtnY + startBtnH;
+                    if (releasedInStart) {
+                        started = true;
+                        FishGeneratorGapTime = 0f; // start spawning immediately
+                        // Start playing main background music from the beginning (or resume if previously paused)
+                        AudioManager.get().playMain();
+                    }
+                    startTouchActive = false;
+                    startPressed = false;
+                }
+            }
+
+            return;
+        }
         // update cannon cooldown timer so canFire()/tryFire() work correctly
         if (cannon != null) cannon.updateFireCooldown(delta);
         FishGeneratorGapTime += delta;
@@ -504,18 +1124,24 @@ public class Swim_Animator implements ApplicationListener {
         float spawnInterval = berserkActive ? 0.3f : 1.0f;
         if (FishGeneratorGapTime >= spawnInterval) {
             // Spawn a new fish at a random vertical position on the left side
-            float ran = MathUtils.random(0,100);
+            for (int i = 0; i < MathUtils.random(1,4); i++) {
+                float ran = MathUtils.random(0,100);
 
-            if (ran < 50.0f) {
-                spawnFish1();
-            }else if(ran < 68f){
-                spawnFish2();
-            }else if(ran < 81f){
-                spawnFish3();
-            }else if(ran < 93f){
-                spawnFish4();
-            }else{
-                spawnFish5();
+                if (ran < 50.0f) {
+                    spawnFish1();
+                }else if(ran < 67f){
+                    spawnFish2();
+                }else if(ran < 79f){
+                    spawnFish3();
+                }else if(ran < 88f){
+                    spawnFish4();
+                }else if(ran < 95f){
+                    spawnFish5();
+                }else if(ran <= 98f){
+                    spawnFish6();
+                }else{
+                    spawnFish7();
+                }
             }
             FishGeneratorGapTime = 0f;
         }
@@ -533,7 +1159,7 @@ public class Swim_Animator implements ApplicationListener {
                 if (isPointInLeftIcon(world.x, world.y)) {
                      iconLeftPressed = true;
                      iconLeftPressTime = 0f;
-                     int levels = 4;
+                     int levels = 5;
                      currentCannonLevel = (currentCannonLevel - 2 + levels) % levels + 1; // downgrade
                      float ang = cannon.getAngleDeg();
                      float cx = cannon.getX();
@@ -542,7 +1168,8 @@ public class Swim_Animator implements ApplicationListener {
                      if (currentCannonLevel == 1) newC = new Cannon1(cx, cy);
                      else if (currentCannonLevel == 2) newC = new Cannon2(cx, cy);
                      else if (currentCannonLevel == 3) newC = new Cannon3(cx, cy);
-                     else newC = new Cannon4(cx, cy);
+                     else if (currentCannonLevel == 4) newC = new Cannon4(cx, cy);
+                     else newC = new Cannon5(cx, cy);
                     // if berserk active, ensure new cannon has berserk cooldown
                     if (berserkActive) {
                          newC.setFireCooldown(0.25f);
@@ -556,7 +1183,7 @@ public class Swim_Animator implements ApplicationListener {
                 if (isPointInRightIcon(world.x, world.y)) {
                      iconRightPressed = true;
                      iconRightPressTime = 0f;
-                     int levels = 4;
+                     int levels = 5;
                      currentCannonLevel = (currentCannonLevel % levels) + 1; // upgrade
                      float ang = cannon.getAngleDeg();
                      float cx = cannon.getX();
@@ -566,7 +1193,8 @@ public class Swim_Animator implements ApplicationListener {
                      if (currentCannonLevel == 1) newC = new Cannon1(cx, cy);
                      else if (currentCannonLevel == 2) newC = new Cannon2(cx, cy);
                      else if (currentCannonLevel == 3) newC = new Cannon3(cx, cy);
-                     else newC = new Cannon4(cx, cy);
+                     else if (currentCannonLevel == 4) newC = new Cannon4(cx, cy);
+                     else newC = new Cannon5(cx, cy);
 
                      if (berserkActive) {
                          newC.setFireCooldown(0.25f);
@@ -594,8 +1222,10 @@ public class Swim_Animator implements ApplicationListener {
                         b = new Bullet2(muzzle[0], muzzle[1], cannon.getAngleDeg() + 90f);
                     } else if (level == 3){ // level == 3
                         b = new Bullet3(muzzle[0], muzzle[1], cannon.getAngleDeg() + 90f);
-                    } else {
+                    } else if (level == 4){
                         b = new Bullet4(muzzle[0], muzzle[1], cannon.getAngleDeg() + 90f);
+                    } else {
+                        b = new Bullet5(muzzle[0], muzzle[1], cannon.getAngleDeg() + 90f);
                     }
 
                     int cost = b.getCost();
@@ -641,6 +1271,17 @@ public class Swim_Animator implements ApplicationListener {
         if (Gdx.input.isKeyJustPressed(Input.Keys.D)) {
             debugDrawCollisions = !debugDrawCollisions;
         }
+        // Allow 'P' to toggle pause (pressing P should pause/unpause immediately)
+        // (keyboard 'P' handling moved earlier so it works while paused)
+        // if (Gdx.input.isKeyJustPressed(Input.Keys.P)) {
+        //     paused = !paused;
+        //     try {
+        //         if (paused) AudioManager.get().pausePlayback();
+        //         else AudioManager.get().resumePlayback();
+        //     } catch (Exception ignored) {}
+        //     Gdx.app.log("Game", "Pause toggled by key P. paused=" + paused);
+        //     return; // consume frame so no state updates this frame
+        // }
 
         // check collisions: flying bullets vs fish
         // collision detection (AABB) - iterate bullets and fish (enhanced for)
@@ -747,18 +1388,29 @@ public class Swim_Animator implements ApplicationListener {
         if (energyBarTexture != null) energyBarTexture.dispose();
         if (shapeRenderer != null) shapeRenderer.dispose();
         // Dispose shared fish resources
+        Fish1.dispose();
         Fish2.dispose();
+        Fish3.dispose();
+        Fish4.dispose();
+        Fish5.dispose();
+        Fish6.dispose();
+        Fish7.dispose();
         // Dispose cannon resources
         Cannon.disposeCommonIcons();
         Cannon1.disposeStatic();
         Cannon2.disposeStatic();
         Cannon3.disposeStatic();
         Cannon4.disposeStatic();
+        Cannon5.disposeStatic();
         // Dispose bullet textures
         Bullet1.disposeTexture();
         Bullet2.disposeTexture();
         Bullet3.disposeTexture();
         Bullet4.disposeTexture();
+        Bullet5.disposeTexture();
+
+        // Dispose audio manager
+        AudioManager.disposeIfExists();
 
     }
 
@@ -778,13 +1430,134 @@ public class Swim_Animator implements ApplicationListener {
     private boolean isPointInRightIcon(float wx, float wy) {
         TextureRegion reg = (Cannon.getPlusRegion() != null) ? Cannon.getPlusRegion() : Cannon.getPlusDownRegion();
         if (reg == null || cannon == null) return false;
-        float baseSpacing = (cannon.getWidth() > 0) ? cannon.getWidth() + 8f : 48f;
+        float baseSpacing = (cannon.getWidth() >  0) ? cannon.getWidth() + 8f : 48f;
         float spacing = baseSpacing * ICON_SPACING_FACTOR;
         float rW = reg.getRegionWidth();
         float rH = reg.getRegionHeight();
         float rightX = cannon.getX() + spacing - rW / 2f;
         float rightY = cannon.getY() - rH / 2f;
         return wx >= rightX && wx <= rightX + rW && wy >= rightY && wy <= rightY + rH;
+    }
+
+    // Draw a rounded-gradient button matching the START button style but scaled for small UI buttons
+    private void drawRoundedGradientButton(ShapeRenderer sr, float x, float y, float w, float h, float baseR, float baseG, float baseB, boolean pressed) {
+        if (sr == null) return;
+        float cx = x + w / 2f;
+        float cy = y + h / 2f;
+        float outerW = w;
+        float outerH = h;
+
+        // Optional pressed shadow behind the button
+        if (pressed) {
+            sr.setColor(0f, 0f, 0f, 0.45f);
+            float pad = Math.min(8f, Math.min(outerW, outerH) * 0.06f);
+            float sw = outerW + pad * 2f;
+            float sh = outerH + pad * 2f;
+            float sx = cx - sw / 2f;
+            float sy = cy - sh / 2f;
+            float cornerShadow = Math.min(Math.min(outerW, outerH) * 0.18f + pad, Math.min(sw, sh) * 0.18f);
+            float innerW = Math.max(0f, sw - 2f * cornerShadow);
+            float innerH = Math.max(0f, sh - 2f * cornerShadow);
+            if (innerW > 0f && innerH > 0f) sr.rect(sx + cornerShadow, sy + cornerShadow, innerW, innerH);
+            if (innerW > 0f) {
+                sr.rect(sx + cornerShadow, sy, innerW, cornerShadow);
+                sr.rect(sx + cornerShadow, sy + sh - cornerShadow, innerW, cornerShadow);
+            }
+            if (innerH > 0f) {
+                sr.rect(sx, sy + cornerShadow, cornerShadow, innerH);
+                sr.rect(sx + sw - cornerShadow, sy + cornerShadow, cornerShadow, innerH);
+            }
+            if (cornerShadow > 0f) {
+                sr.circle(sx + cornerShadow, sy + cornerShadow, cornerShadow);
+                sr.circle(sx + sw - cornerShadow, sy + cornerShadow, cornerShadow);
+                sr.circle(sx + cornerShadow, sy + sh - cornerShadow, cornerShadow);
+                sr.circle(sx + sw - cornerShadow, sy + sh - cornerShadow, cornerShadow);
+            }
+        }
+
+        // concentric rings for gradient (white -> base color)
+        int rings = 12; // fewer rings for small buttons
+        float baseCorner = Math.min(outerW, outerH) * 0.18f;
+        for (int i = rings - 1; i >= 0; i--) {
+            float radiusFrac = (float) i / (rings - 1);
+            float w_i = Math.max(0f, outerW * radiusFrac);
+            float h_i = Math.max(0f, outerH * radiusFrac);
+            if (w_i <= 0f || h_i <= 0f) continue;
+            float x_i = cx - w_i / 2f;
+            float y_i = cy - h_i / 2f;
+
+            float centerFrac = 1f - radiusFrac; // 0 at edge -> 1 at center
+            float t = MathUtils.clamp(centerFrac / 1f, 0f, 1f); // full lerp across rings
+
+            // lerp white -> base color
+            float rcol = (1f - t) + baseR * t;
+            float gcol = (1f - t) + baseG * t;
+            float bcol = (1f - t) + baseB * t;
+            sr.setColor(rcol, gcol, bcol, 1f);
+
+            float corner = baseCorner * radiusFrac;
+            float innerW = Math.max(0f, w_i - 2f * corner);
+            float innerH = Math.max(0f, h_i - 2f * corner);
+            if (innerW > 0f && innerH > 0f) sr.rect(x_i + corner, y_i + corner, innerW, innerH);
+            if (innerW > 0f) {
+                sr.rect(x_i + corner, y_i, innerW, corner);
+                sr.rect(x_i + corner, y_i + h_i - corner, innerW, corner);
+            }
+            if (innerH > 0f) {
+                sr.rect(x_i, y_i + corner, corner, innerH);
+                sr.rect(x_i + w_i - corner, y_i + corner, corner, innerH);
+            }
+            if (corner > 0f) {
+                sr.circle(x_i + corner, y_i + corner, corner);
+                sr.circle(x_i + w_i - corner, y_i + corner, corner);
+                sr.circle(x_i + corner, y_i + h_i - corner, corner);
+                sr.circle(x_i + w_i - corner, y_i + h_i - corner, corner);
+            }
+        }
+    }
+
+    // UI hit test for pause button
+    private boolean isPointInPauseButton(float wx, float wy) {
+        return wx >= pauseBtnX && wx <= pauseBtnX + pauseBtnW && wy >= pauseBtnY && wy <= pauseBtnY + pauseBtnH;
+    }
+
+    // UI hit test for back button (top-left)
+    private boolean isPointInBackButton(float wx, float wy) {
+        return wx >= backBtnX && wx <= backBtnX + backBtnW && wy >= backBtnY && wy <= backBtnY + backBtnH;
+    }
+
+    // Helper to return to the start screen and stop music
+    private void goBackToStart() {
+        // Stop and dispose audio to ensure music fully stops
+        try {
+            AudioManager.disposeIfExists();
+        } catch (Exception ignored) {}
+
+        // Clear runtime entities and bullets
+        bullets.clear();
+        fishEntities.clear();
+
+        // Reset core game state to initial values
+        started = false;
+        paused = false;
+        berserkActive = false;
+        berserkTimer = 0f;
+        subtitleText = null;
+        subtitleTimer = 0f;
+        playerEnergy = 0f;
+        playerScore = 1000;
+        FishGeneratorGapTime = 2.0f;
+
+        // Reset cannon to level 1 centered
+        if (viewport != null) {
+            cannon = new Cannon1(viewport.getWorldWidth() / 2f, viewport.getWorldHeight() / 2f);
+        } else {
+            cannon = new Cannon1(Gdx.graphics.getWidth() / 2f, Gdx.graphics.getHeight() / 2f);
+        }
+        currentCannonLevel = 1;
+
+        // Recompute UI geometry
+        resize(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
     }
 
     // --- Berserk helpers ---
@@ -808,6 +1581,9 @@ public class Swim_Animator implements ApplicationListener {
         subtitleDuration = subtitleDelay + subtitleScaleDuration;
         // ensure energy is full (start decreasing from 100)
         playerEnergy = 100f;
+
+        // Notify audio manager to enter berserk (pause main, fade in berserk track)
+        AudioManager.get().enterBerserk();
     }
 
     private void endBerserk() {
@@ -820,12 +1596,16 @@ public class Swim_Animator implements ApplicationListener {
              cannon.resetFireTimer();
          }
          // show exit subtitle briefly
-         subtitleText = "EXIT BERSERK MODE"; // show Chinese text for end
+         subtitleText = "EXIT BERSERK MODE";
          subtitleTimer = 0f;
          // keep the end text visible for 0.5s before any scaling/fade
          subtitleDelay = 0.5f;
          subtitleScaleDuration = 0.6f; // then scale/fade over 0.6s
          subtitleMaxScaleIncrease = 0.3f; // small scale-up
          subtitleDuration = subtitleDelay + subtitleScaleDuration;
+
+         // Notify audio manager to exit berserk (fade out berserk track and resume main)
+         AudioManager.get().exitBerserk();
      }
- }
+
+}
