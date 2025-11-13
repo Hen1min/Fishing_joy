@@ -112,7 +112,7 @@ public class Fish1 {
         float centerX = halfW * 0.12f; // slight right bias for Fish1
         List<MultiCircleCollision.Circle> circles = new ArrayList<>();
         // main body (upper area)
-        circles.add(new MultiCircleCollision.Circle(centerX, halfH * 0.18f, bodyBase));
+        circles.add(new MultiCircleCollision.Circle(centerX + halfW * 0.27f + 5f, halfH * 0.20f, bodyBase * 0.8f));
         // head (further to the right)
         circles.add(new MultiCircleCollision.Circle(centerX + halfW * 0.22f, halfH * 0.20f, bodyBase * 0.95f));
         // tail (left, smaller)

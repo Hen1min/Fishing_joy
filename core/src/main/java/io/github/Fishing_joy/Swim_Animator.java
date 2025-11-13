@@ -380,11 +380,13 @@ public class Swim_Animator implements ApplicationListener {
         startBtnX = (viewport.getWorldWidth() - startBtnW) / 2f;
         startBtnY = (viewport.getWorldHeight() - startBtnH) / 2f;
 
-        // compute help button geometry (fixed size) centered under start button
-        helpBtnW = Math.min(80f, startBtnW * 0.25f);
-        helpBtnH = Math.min(80f, startBtnH * 0.25f);
+        // compute help button geometry: make it twice as large and place it further below the START button
+        // Start from previous sizing but scale up by 2x (and cap at a larger max to avoid oversize)
+        helpBtnW = Math.min(160f, startBtnW * 0.6f); // doubled from 0.25 -> 0.5 fraction
+        helpBtnH = Math.min(160f, startBtnH * 0.6f);
         helpBtnX = startBtnX + (startBtnW - helpBtnW) / 2f;
-        helpBtnY = startBtnY - helpBtnH - 10f; // 10 pixels padding
+        // increase vertical padding to ensure no overlap with START; use 20px padding
+        helpBtnY = startBtnY - helpBtnH - 10f; // increased padding
 
         // compute pause button geometry (fixed size) anchored to top-right corner
         // Make pause button even smaller per user's request
@@ -476,20 +478,13 @@ public class Swim_Animator implements ApplicationListener {
                     // Draw START button using the same rounded-gradient button helper so its color/appearance behaves like the BACK button
                     drawRoundedGradientButton(shapeRenderer, startBtnX, startBtnY, startBtnW, startBtnH, 1f, 0.65f, 0f, startPressed);
 
-                    // Draw help button background (a circular button) with pressed shadow similar to START pressed style
-                    float hx = helpBtnX + helpBtnW / 2f;
-                    float hy = helpBtnY + helpBtnH / 2f;
-                    float hr = Math.min(helpBtnW, helpBtnH) / 2f;
-                    if (helpPressed) {
-                        // reduce pressed shadow radius by half (was hr + 6f)
-                        shapeRenderer.setColor(0f, 0f, 0f, 0.45f);
-                        shapeRenderer.circle(hx, hy, hr + 1.5f);
-                    }
-                    // help button base: light orange border with white fill
-                    shapeRenderer.setColor(1f, 0.85f, 0.55f, 1f);
-                    shapeRenderer.circle(hx, hy, hr);
+                    // Draw help button as a circular gradient button (matching START color/style but circular)
+                    float hx = helpBtnX + helpBtnW * 0.5f;
+                    float hy = helpBtnY + helpBtnH * 0.5f;
+                    float hr = Math.min(helpBtnW, helpBtnH) * 0.5f;
+                    drawCircularGradientButton(shapeRenderer, hx, hy, hr, 1f, 0.65f, 0f, helpPressed);
 
-                    shapeRenderer.end();
+                     shapeRenderer.end();
                 }
 
                 // draw START text (use black and visually bolder by drawing multiple slightly-offset passes)
@@ -1456,6 +1451,30 @@ public class Swim_Animator implements ApplicationListener {
                 sr.circle(x_i + corner, y_i + h_i - corner, corner);
                 sr.circle(x_i + w_i - corner, y_i + h_i - corner, corner);
             }
+        }
+    }
+
+    // Draw a circular gradient button (white center -> base color rim) with optional pressed shadow
+    private void drawCircularGradientButton(ShapeRenderer sr, float cx, float cy, float radius, float baseR, float baseG, float baseB, boolean pressed) {
+        if (sr == null) return;
+        // pressed shadow
+        if (pressed) {
+            sr.setColor(0f, 0f, 0f, 0.45f);
+            float pad = Math.min(8f, radius * 0.06f);
+            sr.circle(cx, cy, radius + pad);
+        }
+
+        int rings = 18; // more rings for smoother circular gradient
+        for (int i = rings - 1; i >= 0; i--) {
+            float frac = (float) i / (rings - 1); // 0..1
+            float r = Math.max(0f, radius * frac);
+            if (r <= 0f) continue;
+            float t = 1f - frac; // 0 at edge -> 1 at center
+            float rcol = (1f - t) + baseR * t;
+            float gcol = (1f - t) + baseG * t;
+            float bcol = (1f - t) + baseB * t;
+            sr.setColor(rcol, gcol, bcol, 1f);
+            sr.circle(cx, cy, r);
         }
     }
 

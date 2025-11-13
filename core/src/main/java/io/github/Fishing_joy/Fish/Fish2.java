@@ -108,7 +108,7 @@ public class Fish2 {
         // shift centroid slightly to the right and add left-side small filler circles
         float centerX = halfW * 0.12f; // slight right bias for Fish2
         List<MultiCircleCollision.Circle> circles = new ArrayList<>();
-        circles.add(new MultiCircleCollision.Circle(centerX, halfH * 0.18f, base));
+        circles.add(new MultiCircleCollision.Circle(centerX + halfW * 0.22f + 10f , halfH * 0.20f, base * 0.75f));
         circles.add(new MultiCircleCollision.Circle(centerX + halfW * 0.20f, halfH * 0.20f, base * 0.9f));
         circles.add(new MultiCircleCollision.Circle(centerX - halfW * 0.30f, halfH * 0.12f, base * 0.65f));
         circles.add(new MultiCircleCollision.Circle(centerX - halfW * 0.60f, halfH * 0.18f, base * 0.38f));
