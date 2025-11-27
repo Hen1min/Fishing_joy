@@ -1,5 +1,7 @@
 # Fishing_Joy
 
+NOTE: Automated Android APK export steps have been removed from this repository to focus on desktop (exe) builds. If you need the original APK build script, see `setup_sdk_and_build.bat.orig` in the project root. Manual Android builds can still be performed using Android Studio or by restoring the original script.
+
 A [libGDX](https://libgdx.com/) project generated with [gdx-liftoff](https://github.com/libgdx/gdx-liftoff).
 
 This project was generated with a template including simple application launchers and an `ApplicationAdapter` extension that draws libGDX logo.

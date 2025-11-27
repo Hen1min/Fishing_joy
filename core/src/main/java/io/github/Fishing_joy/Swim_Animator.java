@@ -492,92 +492,68 @@ public class Swim_Animator implements ApplicationListener {
                 if (font != null) {
                     String text = "ENDLESS MODE";
                     // choose scale based on button height; slightly larger than before to help bold look
-                    float scaleVal = Math.min(1.8f, startBtnH / 60f);
+                    float scaleVal = Math.min(1.8f, startBtnH / 40f);
                     font.getData().setScale(scaleVal);
 
-                    // compute per-character widths and total width with extra spacing
-                    GlyphLayout tmpGl = new GlyphLayout();
-                    float extraSpacing = scaleVal * 6f; // increased letter spacing (adjust this value to change spacing)
-                    float totalWidth = 0f;
-                    for (int i = 0; i < text.length(); i++) {
-                        String chs = String.valueOf(text.charAt(i));
-                        tmpGl.setText(font, chs);
-                        totalWidth += tmpGl.width;
-                        if (i < text.length() - 1) totalWidth += extraSpacing;
-                    }
-
-                    // compute vertical position using a representative glyph height
-                    GlyphLayout heightGl = new GlyphLayout(font, text);
-                    float txStart = startBtnX + (startBtnW - totalWidth) / 2f;
-                    float ty = startBtnY + (startBtnH + heightGl.height) / 2f;
+                    // compute total width/height using GlyphLayout (single-pass rendering)
+                    GlyphLayout gl = new GlyphLayout(font, text);
+                    float txStart = startBtnX + (startBtnW - gl.width) / 2f;
+                    float ty = startBtnY + (startBtnH + gl.height) / 2f;
 
                     // black color for START text
                     font.setColor(0f, 0f, 0f, 1f);
-                    // draw multiple slightly offset passes to simulate boldness, but draw per-character with extra spacing
-                    float boldOffset = Math.max(1f, scaleVal * 0.1f);
-                    float[][] passes = new float[][] { { -boldOffset, 0f }, { boldOffset, 0f }, { 0f, -boldOffset }, { 0f, boldOffset }, { 0f, 0f } };
-
-                    for (int p = 0; p < passes.length; p++) {
-                        float ox = passes[p][0];
-                        float oy = passes[p][1];
-                        float penX = txStart + ox;
-                        for (int i = 0; i < text.length(); i++) {
-                            String chs = String.valueOf(text.charAt(i));
-                            tmpGl.setText(font, chs);
-                            font.draw(spriteBatch, chs, penX, ty + oy);
-                            penX += tmpGl.width + extraSpacing;
-                        }
-                    }
+                    // Draw the text once (no multiple offset passes)
+                    font.draw(spriteBatch, text, txStart, ty);
 
                     // Draw help button label '?' centered atop the circular button
                     String q = "?";
-                    // choose a base scale for the help label, then enlarge by 2x to make '?' twice as big
+                    // choose a base scale for the help label, then enlarge appropriately
                     float baseQScale = Math.min(1f, helpBtnH / 60f);
-                    float qScale = baseQScale * 3.0f; // double size
-                    font.getData().setScale(qScale);
-                    font.setColor(0f, 0f, 0f, 1f);
-                    // center '?' within the circular help button using GlyphLayout (width/height measured at current scale)
-                    GlyphLayout qGl = new GlyphLayout(font, q);
-                    float qX = helpBtnX + helpBtnW * 0.5f - qGl.width / 2f;
-                    float qY = helpBtnY + helpBtnH * 0.5f + qGl.height / 2f;
-                    font.draw(spriteBatch, q, qX, qY);
+                    float qScale = baseQScale * 3.0f; // enlarge for visibility
+                     font.getData().setScale(qScale);
+                     font.setColor(0f, 0f, 0f, 1f);
+                     // center '?' within the circular help button using GlyphLayout (width/height measured at current scale)
+                     GlyphLayout qGl = new GlyphLayout(font, q);
+                     float qX = helpBtnX + helpBtnW * 0.5f - qGl.width / 2f;
+                     float qY = helpBtnY + helpBtnH * 0.5f + qGl.height / 2f;
+                     font.draw(spriteBatch, q, qX, qY);
 
                      // restore font scale and color
                      font.getData().setScale(1f);
                      font.setColor(1f, 1f, 1f, 1f);
-                }
-                spriteBatch.end();
+                 }
+                 spriteBatch.end();
 
-                // If help overlay is visible, draw it on top and intercept input
-                if (showHelpOverlay) {
-                    if (shapeRenderer != null) {
-                        shapeRenderer.setProjectionMatrix(viewport.getCamera().combined);
-                        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
-                        // dim background
-                        shapeRenderer.setColor(0f,0f,0f,0.6f);
-                        shapeRenderer.rect(0,0,viewport.getWorldWidth(), viewport.getWorldHeight());
+                 // If help overlay is visible, draw it on top and intercept input
+                 if (showHelpOverlay) {
+                     if (shapeRenderer != null) {
+                         shapeRenderer.setProjectionMatrix(viewport.getCamera().combined);
+                         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+                         // dim background
+                         shapeRenderer.setColor(0f,0f,0f,0.6f);
+                         shapeRenderer.rect(0,0,viewport.getWorldWidth(), viewport.getWorldHeight());
 
-                        // draw centered panel
-                        float panelW = Math.min(viewport.getWorldWidth() * 0.9f, 800f);
-                        float panelH = Math.min(viewport.getWorldHeight() * 0.8f, 600f);
-                        float px = (viewport.getWorldWidth() - panelW) / 2f;
-                        float py = (viewport.getWorldHeight() - panelH) / 2f;
-                        shapeRenderer.setColor(0.98f, 0.95f, 0.9f, 1f);
-                        shapeRenderer.rect(px, py, panelW, panelH);
-                        shapeRenderer.end();
-                    }
-                    // draw fish info text inside panel
-                    spriteBatch.begin();
-                    if (font != null) {
-                        font.getData().setScale(1f);
-                        font.setColor(0f,0f,0f,1f);
-                        String title = "Fish Guide";
-                        float panelW = Math.min(viewport.getWorldWidth() * 0.9f, 800f);
-                        float panelH = Math.min(viewport.getWorldHeight() * 0.8f, 600f);
-                        float px = (viewport.getWorldWidth() - panelW) / 2f;
-                        float py = (viewport.getWorldHeight() - panelH) / 2f;
-                        GlyphLayout titleGl = new GlyphLayout(font, title);
-                        font.draw(spriteBatch, title, px + 20f, py + panelH - 20f);
+                         // draw centered panel
+                         float panelW = Math.min(viewport.getWorldWidth() * 0.9f, 800f);
+                         float panelH = Math.min(viewport.getWorldHeight() * 0.8f, 600f);
+                         float px = (viewport.getWorldWidth() - panelW) / 2f;
+                         float py = (viewport.getWorldHeight() - panelH) / 2f;
+                         shapeRenderer.setColor(0.98f, 0.95f, 0.9f, 1f);
+                         shapeRenderer.rect(px, py, panelW, panelH);
+                         shapeRenderer.end();
+                     }
+                     // draw fish info text inside panel
+                     spriteBatch.begin();
+                     if (font != null) {
+                         font.getData().setScale(1f);
+                         font.setColor(0f,0f,0f,1f);
+                         String title = "Fish Guide";
+                         float panelW = Math.min(viewport.getWorldWidth() * 0.9f, 800f);
+                         float panelH = Math.min(viewport.getWorldHeight() * 0.8f, 600f);
+                         float px = (viewport.getWorldWidth() - panelW) / 2f;
+                         float py = (viewport.getWorldHeight() - panelH) / 2f;
+                         GlyphLayout titleGl = new GlyphLayout(font, title);
+                         font.draw(spriteBatch, title, px + 20f, py + panelH - 20f);
 
                         // Draw right-side help tips: Press D / Press P
                         String tipLine1 = "Press D to see the HitBox.";
@@ -796,10 +772,6 @@ public class Swim_Animator implements ApplicationListener {
                     float cx = viewport.getWorldWidth() / 2f;
                     float cy = viewport.getWorldHeight() / 2f;
 
-                    // base extra spacing between characters (in pixels at scale 1); will grow with scaleProgress
-                    float baseExtraSpacing = 1.5f; // tweakable
-                    float extraSpacing = baseExtraSpacing * (1f + 1.5f * scaleProgress); // increases as scaling proceeds
-
                     // compute scaled heights and vertical layout
                     GlyphLayout tmp = new GlyphLayout();
                     tmp.setText(font, "M");
@@ -819,25 +791,14 @@ public class Swim_Animator implements ApplicationListener {
 
                     for (int li = 0; li < lines.length; li++) {
                         String line = lines[li];
-                        // compute width of line with per-char spacing
-                        float lineWidth = 0f;
-                        for (int ci = 0; ci < line.length(); ci++) {
-                            char ch = line.charAt(ci);
-                            tmp.setText(font, String.valueOf(ch));
-                            lineWidth += tmp.width;
-                            if (ci < line.length() - 1) lineWidth += extraSpacing;
-                        }
-                        float lineX = cx - lineWidth / 2f;
+
+                        // compute width of the whole line using GlyphLayout (no per-character extra spacing)
+                        GlyphLayout lineGl = new GlyphLayout(font, line);
+                        float lineX = cx - lineGl.width / 2f;
                         float lineY = startY - li * (singleLineHeight + lineGap);
 
-                        // draw characters one-by-one with extra spacing
-                        float penX = lineX;
-                        for (int ci = 0; ci < line.length(); ci++) {
-                            String chs = String.valueOf(line.charAt(ci));
-                            tmp.setText(font, chs);
-                            font.draw(spriteBatch, chs, penX, lineY);
-                            penX += tmp.width + extraSpacing;
-                        }
+                        // draw the entire line in a single pass
+                        font.draw(spriteBatch, line, lineX, lineY);
                     }
 
                     // restore font
@@ -1229,14 +1190,13 @@ public class Swim_Animator implements ApplicationListener {
                 // Use SAT polygon intersection on the drawn rectangles (pixel-aligned sprite boxes rotated by their draw angles)
                 // Bullet stores its center at (bx,by) and is drawn rotated by (angleDeg - 80) in its render method, so use the same.
                 float bRotation = b.getAngleDeg() - 80f;
-                float[] bPoly = CollisionUtil.buildRectPoly(bx, by, bw, bh, bRotation);
-                // Fish is drawn with batch.draw(..., x, y, width/2, height/2, width, height, 1,1, angle)
-                // where x,y are the bottom-left corner. Build polygon using the sprite center.
-                float fw = fe.fish.getWidth();
-                float fh = fe.fish.getHeight();
-                float fCenterX = fe.x + fw / 2f;
-                float fCenterY = fe.y + fh / 2f;
-                float fRotation = fe.angle;
+                 // Fish is drawn with batch.draw(..., x, y, width/2, height/2, width, height, 1,1, angle)
+                 // where x,y are the bottom-left corner. Build polygon using the sprite center.
+                 float fw = fe.fish.getWidth();
+                 float fh = fe.fish.getHeight();
+                 float fCenterX = fe.x + fw / 2f;
+                 float fCenterY = fe.y + fh / 2f;
+                 float fRotation = fe.angle;
 
                 float br = b.getCollisionRadius();
                 boolean hit = MultiCircleCollision.bulletHitsSpriteCircles(bx, by, br, fCenterX, fCenterY, fRotation, fe.fish.getCollisionCircles());
@@ -1571,3 +1531,4 @@ public class Swim_Animator implements ApplicationListener {
      }
 
 }
+

@@ -1,56 +1,14 @@
-// Minimal Android module build.gradle
-// Use legacy buildscript classpath to supply the Android Gradle plugin so Gradle can resolve it
-buildscript {
-    repositories {
-        google()
-        mavenCentral()
-        mavenLocal()
+// Android build disabled in this repository.
+// Original file backed up as android/build.gradle.orig
+// To restore Android APK support, rename android/build.gradle.orig -> android/build.gradle
+
+// Minimal Gradle stub to avoid build failures if this module is referenced.
+// It does not apply the Android plugin or configure any Android tasks.
+
+println '\n*** NOTICE: Android build is disabled in this checkout. ***\nRestore android/build.gradle.orig to re-enable APK building.\n'
+
+tasks.register('androidBuildDisabled') {
+    doLast {
+        println 'Android build is disabled. Restore the original build.gradle if you need to build APKs.'
     }
-    dependencies {
-        classpath 'com.android.tools.build:gradle:8.1.0'
-    }
-}
-
-apply plugin: 'com.android.application'
-
-android {
-    namespace "io.github.Fishing_joy"
-    compileSdkVersion 33
-
-    defaultConfig {
-        applicationId "io.github.Fishing_joy"
-        minSdkVersion 21
-        targetSdkVersion 33
-        versionCode 1
-        versionName "1.0"
-    }
-
-    compileOptions {
-        sourceCompatibility JavaVersion.VERSION_11
-        targetCompatibility JavaVersion.VERSION_11
-    }
-
-    packagingOptions {
-        // avoid packaging duplicate files if any
-        exclude "META-INF/*.kotlin_module"
-    }
-
-    // Include the project root assets folder so existing assets are packaged
-    sourceSets {
-        main {
-            assets.srcDirs += ["$rootDir/assets"]
-        }
-    }
-}
-
-repositories {
-    google()
-    mavenCentral()
-    mavenLocal()
-}
-
-dependencies {
-    implementation project(':core')
-    implementation "com.badlogicgames.gdx:gdx-backend-android:$gdxVersion"
-    implementation "com.badlogicgames.gdx:gdx-box2d:$gdxVersion"
 }

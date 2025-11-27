@@ -10,3 +10,14 @@ dependencies {
     implementation "io.github.berstanio:gdx-svmhelper-annotations:$graalHelperVersion"
   }
 }
+
+java {
+  // 使用 Gradle Java Toolchain 指定目标 Java 版本（17）
+  toolchain {
+    languageVersion = JavaLanguageVersion.of(17)
+  }
+}
+tasks.withType(JavaCompile).configureEach {
+  options.release.set(17)
+  options.encoding = 'UTF-8'
+}
