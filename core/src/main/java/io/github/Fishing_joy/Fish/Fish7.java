@@ -86,15 +86,31 @@ public class Fish7 {
         // nudged upward so collision circles angle upward more
         float centerY = halfH * 0.37f; // increased up bias
         List<MultiCircleCollision.Circle> circles = new ArrayList<>();
-        // main top-right body
-        circles.add(new MultiCircleCollision.Circle(centerX, centerY, base));
-        // forward-right head (shifted up)
-        circles.add(new MultiCircleCollision.Circle(centerX + halfW * 0.20f, centerY + halfH * 0.22f, base * 0.95f));
-        // backward-left tail area (smaller, shifted up)
-        circles.add(new MultiCircleCollision.Circle(centerX - halfW * 0.40f, centerY - halfH * 0.08f, base * 0.65f));
-        // diagonal fillers up-left to cover remaining body (moved upward)
-        circles.add(new MultiCircleCollision.Circle(centerX - halfW * 0.65f, centerY - halfH * 0.22f, base * 0.45f));
-        circles.add(new MultiCircleCollision.Circle(centerX - halfW * 0.9f, centerY - halfH * 0.38f, base * 0.30f));
+        // rotation: add +15 degrees to existing tilt
+        // increased tilt: add +30 degrees (previously 15°; user requested extra +15°)
+        float angleDeg = 30f;
+        double rad = Math.toRadians(angleDeg);
+        float cos = (float)Math.cos(rad);
+        float sin = (float)Math.sin(rad);
+        float base1 = base * 1.2f;
+        // helper to rotate a point (rawX, rawY) around (centerX, centerY)
+        // main top-right body (center stays same)
+        circles.add(new MultiCircleCollision.Circle(centerX, centerY, base1));
+        // prepare raw points
+        float r1x = centerX + halfW * 0.20f; float r1y = centerY + halfH * 0.22f; // forward-right head
+        float r2x = centerX - halfW * 0.40f; float r2y = centerY - halfH * 0.08f; // backward-left tail
+        float r3x = centerX - halfW * 0.65f; float r3y = centerY - halfH * 0.22f; // diagonal filler
+        float r4x = centerX - halfW * 0.9f;  float r4y = centerY - halfH * 0.38f; // far tail
+        // rotate and add with corresponding radii
+        float dx, dy, rx, ry;
+        dx = r1x - centerX; dy = r1y - centerY; rx = centerX + (dx * cos - dy * sin); ry = centerY + (dx * sin + dy * cos);
+        circles.add(new MultiCircleCollision.Circle(rx, ry, base1 * 0.95f));
+        dx = r2x - centerX; dy = r2y - centerY; rx = centerX + (dx * cos - dy * sin); ry = centerY + (dx * sin + dy * cos);
+        circles.add(new MultiCircleCollision.Circle(rx, ry, base1 * 0.65f));
+        dx = r3x - centerX; dy = r3y - centerY; rx = centerX + (dx * cos - dy * sin); ry = centerY + (dx * sin + dy * cos);
+        circles.add(new MultiCircleCollision.Circle(rx, ry, base1 * 0.45f));
+        dx = r4x - centerX; dy = r4y - centerY; rx = centerX + (dx * cos - dy * sin); ry = centerY + (dx * sin + dy * cos);
+        circles.add(new MultiCircleCollision.Circle(rx, ry, base1 * 0.30f));
         f.setCollisionCircles(circles);
         return f;
     }

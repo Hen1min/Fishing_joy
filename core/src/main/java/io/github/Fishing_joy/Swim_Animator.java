@@ -37,6 +37,7 @@ import io.github.Fishing_joy.Fish.Fish4;
 import io.github.Fishing_joy.Fish.Fish5;
 import io.github.Fishing_joy.Fish.Fish6;
 import io.github.Fishing_joy.Fish.Fish7;
+import io.github.Fishing_joy.Fish.Fish8;
 import io.github.Fishing_joy.util.MultiCircleCollision;
 
 import java.util.ArrayList;
@@ -79,6 +80,11 @@ public class Swim_Animator implements ApplicationListener {
     private float berserkTimer = 0f;
     private static final float BERSERK_DURATION = 20f; // seconds
     private float berserkOriginalCooldown = 0.5f; // stored to restore after berserk
+
+    // --- Stun (定身) state triggered by Fish8 ---
+    private boolean stunActive = false;
+    private float stunTimer = 0f;
+    private static final float STUN_DURATION = 2.0f; // seconds fish are frozen
 
     // subtitle (centered) animation for entering/exiting berserk
     private String subtitleText = null;
@@ -233,6 +239,7 @@ public class Swim_Animator implements ApplicationListener {
         Fish5.load();
         Fish6.load();
         Fish7.load();
+        Fish8.load();
 
         // Populate help prototypes for the info overlay (name, hp, points, energy)
         helpFishPrototypes.clear();
@@ -243,6 +250,7 @@ public class Swim_Animator implements ApplicationListener {
         helpFishPrototypes.add(Fish5.create());
         helpFishPrototypes.add(Fish6.create());
         helpFishPrototypes.add(Fish7.create());
+        helpFishPrototypes.add(Fish8.create());
 
         // Create a few Fish instances at different positions with different speed
         // All Fish1 instances use the type default speed (Fish1.DEFAULT_SPEED internally)
@@ -347,6 +355,19 @@ public class Swim_Animator implements ApplicationListener {
         Fish fish = Fish7.create();
         float Num = MathUtils.random();
         //fishEntities.add(new FishEntity(fish, -fish.getWidth(), MathUtils.random(0, viewport.getWorldHeight() - fish.getHeight()),MathUtils.random(0,360)));
+        if (Num<1/3f) {
+            // keep render angle as originally randomized; movement will be adjusted in update()
+            fishEntities.add(new FishEntity(fish, -fish.getWidth(), MathUtils.random(0, viewport.getWorldHeight()), MathUtils.random(-45, 45), -1));//左边出
+        } else if (Num < 2/3f) {
+            fishEntities.add(new FishEntity(fish,  viewport.getWorldWidth() + fish.getWidth(), MathUtils.random(0,viewport.getWorldHeight()), MathUtils.random(135,225), 1));//右边出
+        } else {
+            fishEntities.add(new FishEntity(fish, MathUtils.random(0,viewport.getWorldWidth()) , viewport.getWorldHeight(), MathUtils.random(225,305), 0));//上边出
+        }
+    }
+
+    public void spawnFish8() {
+        Fish fish = Fish8.create();
+        float Num = MathUtils.random();
         if (Num<1/3f) {
             fishEntities.add(new FishEntity(fish, -fish.getWidth(), MathUtils.random(0, viewport.getWorldHeight()), MathUtils.random(-45, 45), -1));//左边出
         } else if (Num < 2/3f) {
@@ -545,7 +566,8 @@ public class Swim_Animator implements ApplicationListener {
                      // draw fish info text inside panel
                      spriteBatch.begin();
                      if (font != null) {
-                         font.getData().setScale(1f);
+                         // shrink all help/intro overlay fonts to 0.8x so the panel fits the extra fish
+                         font.getData().setScale(0.8f);
                          font.setColor(0f,0f,0f,1f);
                          String title = "Fish Guide";
                          float panelW = Math.min(viewport.getWorldWidth() * 0.9f, 800f);
@@ -555,30 +577,30 @@ public class Swim_Animator implements ApplicationListener {
                          GlyphLayout titleGl = new GlyphLayout(font, title);
                          font.draw(spriteBatch, title, px + 20f, py + panelH - 20f);
 
-                        // Draw right-side help tips: Press D / Press P
-                        String tipLine1 = "Press D to see the HitBox.";
-                        String tipLine2 = "Press P to pause the game.";
-                        GlyphLayout tipGl = new GlyphLayout();
-                        tipGl.setText(font, tipLine1);
-                        float tipX = px + panelW - 20f - tipGl.width; // 20px padding from right
-                        float tipY = py + panelH - 40f; // a little below the title
-                        font.draw(spriteBatch, tipLine1, tipX, tipY);
-                        // second line below the first
-                        tipGl.setText(font, tipLine2);
-                        font.draw(spriteBatch, tipLine2, tipX, tipY - (tipGl.height + 6f));
-
                         // list fish entries
-                        float y = py + panelH - 60f;
+                        float topY = py + panelH - 60f;
                         // prepare a temporary layout to measure font line height for vertical centering
                         GlyphLayout tmpMeasure = new GlyphLayout();
                         tmpMeasure.setText(font, "M");
                         float fontLineHeight = tmpMeasure.height;
                         final float thumbMax = 48f; // max thumbnail size in pixels
+
+                        // Separate the stun fish from the other prototypes
+                        Fish stunFish = null;
+                        java.util.List<Fish> leftList = new java.util.ArrayList<>();
                         for (Fish f : helpFishPrototypes) {
-                            // draw thumbnail if available
-                            TextureRegion rep = f.getRepresentativeFrame();
-                            float drawX = px + 20f;
-                            float drawY = y - fontLineHeight / 2f; // will offset below to center
+                            try {
+                                if (f.getImagePath() != null && f.getImagePath().equals(Fish8.IMAGE_PATH)) {
+                                    stunFish = f;
+                                    continue;
+                                }
+                            } catch (Exception ignored) {}
+                            leftList.add(f);
+                        }
+
+                        // Draw the stun fish at the right-top corner of the panel (if present)
+                        if (stunFish != null) {
+                            TextureRegion rep = stunFish.getRepresentativeFrame();
                             float drawW = 0f, drawH = 0f;
                             if (rep != null) {
                                 float rw = rep.getRegionWidth();
@@ -586,20 +608,54 @@ public class Swim_Animator implements ApplicationListener {
                                 float scale = Math.min(thumbMax / rw, thumbMax / rh);
                                 drawW = rw * scale;
                                 drawH = rh * scale;
-                                // center thumbnail vertically relative to text baseline
-                                drawY = y - (fontLineHeight / 2f) - (drawH / 2f);
-                                spriteBatch.draw(rep, drawX, drawY, drawW, drawH);
                             }
+                            // right-aligned thumbnail with small padding from panel edge
+                            float thumbX = px + panelW - 20f - drawW;
+                            float thumbY = topY - (fontLineHeight / 2f) - (drawH / 2f);
+                            if (rep != null) spriteBatch.draw(rep, thumbX, thumbY, drawW, drawH);
+                            // draw right-aligned text to the left of the thumbnail
+                            String stunLine = String.format("%s    HP:%d    Points:%d    Energy:%d", stunFish.getName(), stunFish.getMaxHp(), stunFish.getPoints(), stunFish.getEnergy());
+                            GlyphLayout stunGl = new GlyphLayout(font, stunLine);
+                            float textX = Math.max(px + 12f, thumbX - 8f - stunGl.width);
+                            float textY = topY;
+                            font.draw(spriteBatch, stunLine, textX, textY);
+                        }
 
-                            // draw text next to thumbnail with small gap
-                            float textX = drawX + (drawW > 0f ? drawW + 8f : 0f);
+                        // Draw the left column of fish (all other prototypes). Move it slightly left (closer to panel edge)
+                        float leftX = px + 8f; // was px+20f previously, moved left to give room
+                        float y = topY;
+                        for (Fish f : leftList) {
+                            TextureRegion rep = f.getRepresentativeFrame();
+                            float drawW = 0f, drawH = 0f;
+                            float drawY = y - fontLineHeight / 2f;
+                            if (rep != null) {
+                                float rw = rep.getRegionWidth();
+                                float rh = rep.getRegionHeight();
+                                float scale = Math.min(thumbMax / rw, thumbMax / rh);
+                                drawW = rw * scale;
+                                drawH = rh * scale;
+                                drawY = y - (fontLineHeight / 2f) - (drawH / 2f);
+                                spriteBatch.draw(rep, leftX, drawY, drawW, drawH);
+                            }
+                            float textX = leftX + (drawW > 0f ? drawW + 8f : 0f);
                             String line = String.format("%s    HP:%d    Points:%d    Energy:%d", f.getName(), f.getMaxHp(), f.getPoints(), f.getEnergy());
                             font.draw(spriteBatch, line, textX, y);
-
-                            // advance y by the larger of font line height or thumbnail height plus padding
                             float usedH = Math.max(fontLineHeight, drawH);
-                            y -= usedH + 8f; // spacing between entries
+                            y -= usedH + 8f;
                         }
+
+                        // Move the help tips (D/P) to the right-bottom inside the panel
+                        String tipLine1 = "Press D to see the HitBox.";
+                        String tipLine2 = "Press P to pause the game.";
+                        GlyphLayout tipGl = new GlyphLayout();
+                        tipGl.setText(font, tipLine2);
+                        float tipPadding = 12f;
+                        float tipX = px + panelW - 20f - tipGl.width; // right-aligned
+                        float tipY = py + 20f + tipGl.height; // small padding above bottom
+                        font.draw(spriteBatch, tipLine2, tipX, tipY);
+                        // draw the first tip above the second
+                        tipGl.setText(font, tipLine1);
+                        font.draw(spriteBatch, tipLine1, px + panelW - 20f - tipGl.width, tipY + tipGl.height + 6f);
 
                         // hint to close
                         String hint = "Tap anywhere to close";
@@ -1035,9 +1091,12 @@ public class Swim_Animator implements ApplicationListener {
                     spawnFish5();
                 }else if(ran <= 98f){
                     spawnFish6();
-                }else{
+                }else if (ran <= 99f) {
                     spawnFish7();
-                }
+                } else {
+                    // very rare stun fish
+                    spawnFish8();
+                 }
             }
             FishGeneratorGapTime = 0f;
         }
@@ -1149,9 +1208,19 @@ public class Swim_Animator implements ApplicationListener {
         for (FishEntity e : fishEntities) {
             e.fish.update(delta);
             // movement uses each fish's configured speed; do not move dying fish so death animation stays in place
-            if (!e.fish.isDying()) {
-                e.x += e.fish.getSpeed() * delta * MathUtils.cosDeg(e.angle);
-                e.y += e.fish.getSpeed() * delta * MathUtils.sinDeg(e.angle);
+            // when stun is active, freeze non-dying fish in place (they can still be hit)
+            if (!e.fish.isDying() && !stunActive) {
+                // Use a separate movementAngle so we can rotate movement for specific fish types
+                float moveAngle = e.angle;
+                try {
+                    // If this is a Fish7 instance, rotate its movement CCW by 45° while keeping render angle unchanged
+                    if (e.fish.getImagePath() != null && e.fish.getImagePath().equals(Fish7.IMAGE_PATH)) {
+                        // increase movement tilt by additional 15° -> total +60°
+                        moveAngle = e.angle + 60f;
+                    }
+                } catch (Exception ignored) {}
+                e.x += e.fish.getSpeed() * delta * MathUtils.cosDeg(moveAngle);
+                e.y += e.fish.getSpeed() * delta * MathUtils.sinDeg(moveAngle);
             }
         }
 
@@ -1208,6 +1277,14 @@ public class Swim_Animator implements ApplicationListener {
                     // always convert the bullet into a web (capture) regardless of fish death
                     b.capture();
                     if (died) {
+                        // If this fish is the stun fish, trigger global stun effect
+                        try {
+                            if (Fish8.IMAGE_PATH.equals(fe.fish.getImagePath())) {
+                                stunActive = true;
+                                stunTimer = 0f;
+                                Gdx.app.log("Game", "Stun triggered by StunFish: all fish frozen for " + STUN_DURATION + "s");
+                            }
+                        } catch (Exception ignored) {}
                         // fish died: start death animation and defer awarding/removal until animation finishes
                         fe.fish.startDeathAnimation();
                         fe.deathHandled = true;
@@ -1270,6 +1347,16 @@ public class Swim_Animator implements ApplicationListener {
                 endBerserk();
             }
         }
+
+        // Stun timer update
+        if (stunActive) {
+            stunTimer += delta;
+            if (stunTimer >= STUN_DURATION) {
+                stunActive = false;
+                stunTimer = 0f;
+                Gdx.app.log("Game", "Stun ended: fish resume movement");
+            }
+        }
      }
 
     @Override
@@ -1289,6 +1376,7 @@ public class Swim_Animator implements ApplicationListener {
         Fish5.dispose();
         Fish6.dispose();
         Fish7.dispose();
+        Fish8.dispose();
         // Dispose cannon resources
         Cannon.disposeCommonIcons();
         Cannon1.disposeStatic();
