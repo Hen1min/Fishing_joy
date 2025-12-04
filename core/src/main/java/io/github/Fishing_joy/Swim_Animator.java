@@ -46,7 +46,7 @@ import java.util.List;
 public class Swim_Animator implements ApplicationListener {
 
     // Objects used
-    private int playerScore = 1000; // start with 50 points so player can fire immediately
+    private int playerScore = 1000; // start with 1000 points so player can fire immediately
     private float playerEnergy = 0f; // starting energy (float for smooth decrease)
 
     SpriteBatch spriteBatch;

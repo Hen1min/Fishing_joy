@@ -1,4 +1,3 @@
-
 buildscript {
   repositories {
     gradlePluginPortal()
@@ -180,4 +179,65 @@ startScripts.classpath = project.tasks.jar.outputs.files
 
 if(enableGraalNative == 'true') {
   apply from: file("nativeimage.gradle")
+}
+
+// New: jpackage task to create a Windows executable that bundles a JRE so target machines don't need Java installed.
+// Usage: gradlew :lwjgl3:jpackageWin
+import org.apache.tools.ant.taskdefs.condition.Os
+
+// copy the runnable jar into an input folder for jpackage
+tasks.register('prepareJPackageInput', Copy) {
+    dependsOn tasks.named('jar')
+    def inputDir = layout.buildDirectory.dir('jpackage/input').get().asFile
+    doFirst {
+        delete inputDir
+        inputDir.mkdirs()
+    }
+    from { tasks.named('jar').get().archiveFile.get().asFile }
+    into inputDir
+}
+
+// Create a simple jpackage task for Windows
+tasks.register('jpackageWin', Exec) {
+    group = 'distribution'
+    description = 'Package the app as a Windows installer/exe using jpackage (bundles a JRE so Java is not required on target machine).'
+    dependsOn tasks.named('prepareJPackageInput')
+
+    doFirst {
+        // locate jpackage executable: prefer JAVA_HOME, fall back to running JVM home
+        def javaHome = System.getenv('JAVA_HOME') ?: System.getProperty('java.home')
+        if (javaHome == null) {
+            throw new GradleException('JAVA_HOME not found and System Java home is null. Set JAVA_HOME to a JDK that includes jpackage.')
+        }
+        def jpackagePath = new File(javaHome, 'bin' + File.separator + (Os.isFamily(Os.FAMILY_WINDOWS) ? 'jpackage.exe' : 'jpackage'))
+        if (!jpackagePath.exists()) {
+            throw new GradleException("jpackage tool not found at: ${jpackagePath}. Ensure JAVA_HOME points to a JDK that includes jpackage (JDK 17+).")
+        }
+
+        def inputDir = layout.buildDirectory.dir('jpackage/input').get().asFile
+        def destDir = layout.buildDirectory.dir('jpackage/output').get().asFile
+        destDir.mkdirs()
+
+        def jarFile = tasks.named('jar').get().archiveFile.get().asFile
+
+        // prepare command line
+        def cmd = [] as List
+        cmd.add(jpackagePath.absolutePath)
+        cmd.addAll(['--type', 'exe'])
+        cmd.addAll(['--input', inputDir.absolutePath])
+        cmd.addAll(['--main-jar', jarFile.name])
+        cmd.addAll(['--main-class', project.mainClassName])
+        cmd.addAll(['--name', project.ext.appName])
+        cmd.addAll(['--app-version', project.version.toString()])
+        cmd.addAll(['--dest', destDir.absolutePath])
+        // icon: prefer ICO for Windows if exists
+        def ico = file('icons/logo.ico')
+        if (ico.exists()) cmd.addAll(['--icon', ico.absolutePath])
+        // Windows specific options
+        cmd.add('--win-menu')
+        cmd.add('--win-shortcut')
+
+        commandLine = cmd
+        println "Running jpackage: ${commandLine.join(' ')}"
+    }
 }
