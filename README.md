@@ -1,35 +1,46 @@
-# Fishing_Joy
+# Fishing Joy
 
-NOTE: Automated Android APK export steps have been removed from this repository to focus on desktop (exe) builds. If you need the original APK build script, see `setup_sdk_and_build.bat.orig` in the project root. Manual Android builds can still be performed using Android Studio or by restoring the original script.
+Fishing Joy is a casual arcade-style fishing game built with libGDX.
 
-A [libGDX](https://libgdx.com/) project generated with [gdx-liftoff](https://github.com/libgdx/gdx-liftoff).
+In this fast-paced desktop game you control a cannon at the bottom of the screen and fire projectiles to capture fish swimming across the playfield. Each fish type has a different size and score value, and special fish behave unpredictably — aim and time your shots to maximize your score. The game focuses on simple, addictive mechanics, colorful pixel art, and lively sound effects.
 
-This project was generated with a template including simple application launchers and an `ApplicationAdapter` extension that draws libGDX logo.
+Key features
 
-## Platforms
+- Easy-to-learn, hard-to-master arcade gameplay.
+- Multiple fish types with different behaviors and point values.
+- Responsive mouse and keyboard controls for desktop play.
+- Local high-score tracking for short play sessions.
+- Lightweight, cross-platform desktop build using LWJGL3.
 
-- `core`: Main module with the application logic shared by all platforms.
-- `lwjgl3`: Primary desktop platform using LWJGL3; was called 'desktop' in older docs.
+Gameplay overview
 
-## Gradle
+- Objective: Catch fish to earn points. Different fish award different scores.
+- Cannons and upgrades: Use the cannon to shoot nets or projectiles. Some versions include power-ups or multiple cannon levels.
+- Risk vs reward: Bigger or rarer fish are harder to capture but grant more points.
 
-This project uses [Gradle](https://gradle.org/) to manage dependencies.
-The Gradle wrapper was included, so you can run Gradle tasks using `gradlew.bat` or `./gradlew` commands.
-Useful Gradle tasks and flags:
+Controls (desktop - LWJGL3)
 
-- `--continue`: when using this flag, errors will not stop the tasks from running.
-- `--daemon`: thanks to this flag, Gradle daemon will be used to run chosen tasks.
-- `--offline`: when using this flag, cached dependency archives will be used.
-- `--refresh-dependencies`: this flag forces validation of all dependencies. Useful for snapshot versions.
-- `build`: builds sources and archives of every project.
-- `cleanEclipse`: removes Eclipse project data.
-- `cleanIdea`: removes IntelliJ project data.
-- `clean`: removes `build` folders, which store compiled classes and built archives.
-- `eclipse`: generates Eclipse project data.
-- `idea`: generates IntelliJ project data.
-- `lwjgl3:jar`: builds application's runnable jar, which can be found at `lwjgl3/build/libs`.
-- `lwjgl3:run`: starts the application.
-- `test`: runs unit tests (if any).
+- Mouse: Aim the cannon and click to fire.
+- Arrow keys / A,D: (optional) Move the cannon or change aim.
+- +/- or mouse wheel: Change cannon power (if implemented).
+- Esc: Pause or exit the game.
 
-Note that most tasks that are not specific to a single project can be run with `name:` prefix, where the `name` should be replaced with the ID of a specific project.
-For example, `core:clean` removes `build` folder only from the `core` project.
+How to run (desktop)
+
+This project uses Gradle. On Windows you can run the desktop (LWJGL3) launcher using the included Gradle wrapper:
+
+    .\gradlew.bat lwjgl3:run
+
+Or build a runnable JAR:
+
+    .\gradlew.bat lwjgl3:jar
+
+The runnable jar will be produced in `lwjgl3/build/libs`.
+
+Assets and credits
+
+- The game includes sprite and audio assets under the `assets/` directory.
+- Built with libGDX. See libGDX documentation for licensing and distribution details.
+
+
+Enjoy playing Fishing Joy! Contributions, fixes, and improvements are welcome — open an issue or pull request.
