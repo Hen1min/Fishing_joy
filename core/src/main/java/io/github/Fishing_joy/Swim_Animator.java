@@ -1081,15 +1081,15 @@ public class Swim_Animator implements ApplicationListener {
 
                 if (ran < 50.0f) {
                     spawnFish1();
-                }else if(ran < 67f){
+                }else if(ran < 65f){
                     spawnFish2();
-                }else if(ran < 79f){
+                }else if(ran < 77f){
                     spawnFish3();
-                }else if(ran < 88f){
+                }else if(ran < 86f){
                     spawnFish4();
-                }else if(ran < 95f){
+                }else if(ran < 94f){
                     spawnFish5();
-                }else if(ran <= 98f){
+                }else if(ran <= 97f){
                     spawnFish6();
                 }else if (ran <= 99f) {
                     spawnFish7();
